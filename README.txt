@@ -8,6 +8,14 @@ shellbags.py is a cross-platform, open-source shellbag parser.
 The webpage
 http://www.williballenthin.com/forensics/shellbags/index.html
 describes the algorithm in detail.
+Note that shellbags.py was originally developed as a sample
+for python-registry, so this repository is a fork that contains
+the python-registry history through version v0.2.4.1.
+The initial shellbags.py tag v0.5.
+
+Dependencies
+------------
+shellbags.py requires Python2.7, argparse, and python-registry.
 
 Usage
 -----
@@ -15,7 +23,7 @@ shellbags.py accepts the path to a raw Windows Registry hive.
 This hive should be acquired forensically.
 To ensure interoperability, output is formatted according to the Bodyfile specification by default.
 
-Parameter:
+Parameters:
 usage: shellbags.py [-h] [-v] [-p] file [file ...]
 
 Parse Shellbag entries from a Windows Registry.
