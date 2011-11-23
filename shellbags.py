@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-#    This file is part of python-registry.
+#    This file is part of shellbags.py
 #
 #   Copyright 2011 Will Ballenthin <william.ballenthin@mandiant.com>
 #                    while at Mandiant <http://www.mandiant.com>
@@ -176,7 +176,6 @@ class Block(object):
         self._buf = buf
         self._offset = offset
         self._parent = parent
-        self._fields = []
 
     def __unicode__(self):
         return u"BLOCK @ %s." % (hex(self.offset()))
@@ -194,7 +193,7 @@ class Block(object):
         - `fields`: (Optional) A list of tuples to add. Otherwise, 
             self._fields is used.
         """
-        for field in fields or self._fields:
+        for field in fields:
             def handler():
                 f = getattr(self, "unpack_" + field[0])
                 return f(*(field[2:]))
@@ -205,11 +204,14 @@ class Block(object):
                                          str(handler())))
             setattr(self, "_off_" + field[1], field[2])
 
-    def _f(self, type, name, offset, length=False):
+    def declare_field(self, type, name, offset, length=False):
         """
         A shortcut to add a field.
         Arguments:
-        - `t`: A tuple to add.
+        - `type`: A string. Should be one of the unpack_* types.
+        - `name`: A string. 
+        - `offset`: A number.
+        - `length`: (Optional) A number.
         """
         if length:
             self._prepare_fields([(type, name, offset, length)])
@@ -445,8 +447,8 @@ class SHITEM(Block):
     def __init__(self, buf, offset, parent):
         super(SHITEM, self).__init__(buf, offset, parent)
 
-        self._f("word", "size", 0x0)
-        self._f("byte", "type", 0x2)
+        self.declare_field("word", "size", 0x0)
+        self.declare_field("byte", "type", 0x2)
         debug("SHITEM @ %s of type %s." % (hex(offset), hex(self.type())))
 
     def __unicode__(self):
@@ -609,7 +611,7 @@ class SHITEM_FOLDERENTRY(SHITEM):
         super(SHITEM_FOLDERENTRY, self).__init__(buf, offset, parent)
         
         self._off_folderid = 0x3      # UINT8
-        self._f("guid", "guid", 0x4)
+        self.declare_field("guid", "guid", 0x4)
 
     def __unicode__(self):
         return u"SHITEM_FOLDERENTRY @ %s: %s." % \
@@ -652,9 +654,9 @@ class SHITEM_UNKNOWNENTRY0(SHITEM):
         debug("SHITEM_UNKNOWNENTRY0 @ %s." % (hex(offset)))
         super(SHITEM_UNKNOWNENTRY0, self).__init__(buf, offset, parent)
         
-        self._f("word", "size", 0x0) 
+        self.declare_field("word", "size", 0x0) 
         if self.size() == 0x20:
-            self._f("guid", "guid", 0xE)
+            self.declare_field("guid", "guid", 0xE)
         # pretty much completely unknown
         # TODO, if you have time for research
 
@@ -676,8 +678,8 @@ class SHITEM_UNKNOWNENTRY2(SHITEM):
         debug("SHITEM_UNKNOWNENTRY2 @ %s." % (hex(offset)))
         super(SHITEM_UNKNOWNENTRY2, self).__init__(buf, offset, parent)
 
-        self._f("byte", "flags", 0x3)
-        self._f("guid", "guid", 0x4)
+        self.declare_field("byte", "flags", 0x3)
+        self.declare_field("guid", "guid", 0x4)
 
     def __unicode__(self):
         return u"SHITEM_UNKNOWNENTRY2 @ %s: %s." % \
@@ -698,8 +700,8 @@ class SHITEM_URIENTRY(SHITEM):
         debug("SHITEM_URIENTRY @ %s." % (hex(offset)))
         super(SHITEM_URIENTRY, self).__init__(buf, offset, parent)
 
-        self._f("dword", "flags", 0x3)
-        self._f("wstring", "uri", 0x7)
+        self.declare_field("dword", "flags", 0x3)
+        self.declare_field("wstring", "uri", 0x7)
 
     def __unicode__(self):
         return u"SHITEM_URIENTRY @ %s: %s." % \
@@ -713,8 +715,8 @@ class SHITEM_CONTROLPANELENTRY(SHITEM):
         debug("SHITEM_CONTROLPANELENTRY @ %s." % (hex(offset)))
         super(SHITEM_CONTROLPANELENTRY, self).__init__(buf, offset, parent)
 
-        self._f("byte", "flags", 0x3)
-        self._f("guid", "guid", 0xD)
+        self.declare_field("byte", "flags", 0x3)
+        self.declare_field("guid", "guid", 0xD)
 
     def __unicode__(self):
         return u"SHITEM_CONTROLPANELENTRY @ %s: %s." % \
@@ -731,7 +733,7 @@ class SHITEM_VOLUMEENTRY(SHITEM):
         debug("SHITEM_VOLUMEENTRY @ %s." % (hex(offset)))
         super(SHITEM_VOLUMEENTRY, self).__init__(buf, offset, parent)
 
-        self._f("string", "name", 0x3)
+        self.declare_field("string", "name", 0x3)
 
     def __unicode__(self):
         return u"SHITEM_VOLUMEENTRY @ %s: %s." % \
@@ -742,7 +744,7 @@ class SHITEM_NETWORKVOLUMEENTRY(SHITEM):
         debug("SHITEM_NETWORKVOLUMEENTRY @ %s." % (hex(offset)))
         super(SHITEM_NETWORKVOLUMEENTRY, self).__init__(buf, offset, parent)
 
-        self._f("byte", "flags", 0x4)
+        self.declare_field("byte", "flags", 0x4)
         self._off_name = 0x5
 
     def __unicode__(self):
@@ -764,9 +766,9 @@ class SHITEM_NETWORKSHAREENTRY(SHITEM):
         debug("SHITEM_NETWORKSHAREENTRY @ %s." % (hex(offset)))
         super(SHITEM_NETWORKSHAREENTRY, self).__init__(buf, offset, parent)
 
-        self._f("byte", "flags", 0x4)
-        self._f("string", "path", 0x5)
-        self._f("string", "description", 0x5 + len(self.path()) + 1)
+        self.declare_field("byte", "flags", 0x4)
+        self.declare_field("string", "path", 0x5)
+        self.declare_field("string", "description", 0x5 + len(self.path()) + 1)
 
     def __unicode__(self):
         return u"SHITEM_NETWORKSHAREENTRY @ %s: %s." % \
@@ -785,22 +787,22 @@ class Fileentry(SHITEM):
         super(Fileentry, self).__init__(buf, offset, parent)
 
         off = filesize_offset
-        self._f("dword", "filesize", off); off += 4
-        self._f("dosdate", "m_date", off); off += 4
-        self._f("word", "fileattrs", off); off += 2
-        self._f("string", "short_name", off)
+        self.declare_field("dword", "filesize", off); off += 4
+        self.declare_field("dosdate", "m_date", off); off += 4
+        self.declare_field("word", "fileattrs", off); off += 2
+        self.declare_field("string", "short_name", off)
 
         off += len(self.short_name()) + 1
         off = align(off, 2)
 
-        self._f("word", "ext_size", off); off += 2
-        self._f("word", "ext_version", off); off += 2
+        self.declare_field("word", "ext_size", off); off += 2
+        self.declare_field("word", "ext_version", off); off += 2
 
         if self.ext_version() >= 0x03:
             off += 4 # unknown
 
-            self._f("dosdate", "cr_date", off); off += 4
-            self._f("dosdate", "a_date", off); off += 4
+            self.declare_field("dosdate", "cr_date", off); off += 4
+            self.declare_field("dosdate", "a_date", off); off += 4
 
             off += 4 # unknown
         else:
@@ -858,7 +860,7 @@ class SHITEM_FILEENTRY(Fileentry):
         debug("SHITEM_FILEENTRY @ %s." % (hex(offset)))
         super(SHITEM_FILEENTRY, self).__init__(buf, offset, parent, 0x4)
 
-        self._f("byte", "flags", 0x3); 
+        self.declare_field("byte", "flags", 0x3); 
 
     def __unicode__(self):
         return u"SHITEM_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
@@ -868,8 +870,8 @@ class ITEMPOS_FILEENTRY(Fileentry):
         debug("ITEMPOS_FILEENTRY @ %s." % (hex(offset)))
         super(ITEMPOS_FILEENTRY, self).__init__(buf, offset, parent, 0x4)
 
-        self._f("word", "size", 0x0) # override
-        self._f("word", "flags", 0x2); 
+        self.declare_field("word", "size", 0x0) # override
+        self.declare_field("word", "flags", 0x2); 
 
     def __unicode__(self):
         return u"ITEMPOS_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
@@ -879,14 +881,14 @@ class SHITEM_UNKNOWNENTRY3(Fileentry):
         debug("SHITEM_UNKNOWNENTRY3 @ %s." % (hex(offset)))
         super(SHITEM_UNKNOWNENTRY3, self).__init__(buf, offset, parent, 0x4)
 
-        self._f("word", "size", 0x0) 
+        self.declare_field("word", "size", 0x0) 
         # most of this is unknown
         offs = 0x18
-        self._f("string", "short_name", offs)
+        self.declare_field("string", "short_name", offs)
         offs += len(self.short_name()) + 1
         offs = align(offs, 2)
         offs += 0x4C
-        self._f("wstring", "long_name", offs)
+        self.declare_field("wstring", "long_name", offs)
 
     def __unicode__(self):
         return u"SHITEM_UNKNOWNENTRY3 @ %s: %s." % (hex(self.offset()), self.name())

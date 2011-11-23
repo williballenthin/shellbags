@@ -1,116 +1,68 @@
 
-
-python-registry
+shellbags.py
 ===============
 
 Introduction
 ------------
-python-registry was originally written by Willi Ballenthin,
-a forensicator at Mandiant who wanted to access the contents of the 
-Windows Registry from his Linux laptop. python-registry 
-currently provides read-only access to Windows Registry files, 
-such as NTUSER.DAT, userdiff, and SAM. The interface is two-fold:
-a high-level interface suitable for most tasks, and a low level 
-set of parsing objects and methods which may be used for advanced 
-study of the Windows Registry. python-registry is written in pure 
-Python, making it portable across all major platforms.
+shellbags.py is a cross-platform, open-source shellbag parser.
+The webpage
+http://www.williballenthin.com/forensics/shellbags/index.html
+describes the algorithm in detail.
 
 Usage
 -----
+shellbags.py accepts the path to a raw Windows Registry hive.
+This hive should be acquired forensically.
+To ensure interoperability, output is formatted according to the Bodyfile specification by default.
 
-Most users will find the Registry.Registry module most appropriate. 
-The module exposes three classes: the Registry, the RegistryKey, 
-and the RegistryValue. The Registry organizes parsing and access 
-to the Windows Registry file. The RegistryKey is a convenient 
-interface into the tree-like structure of the Windows Registry. 
-A RegistryKey may have children RegistryKeys, and may also have 
-values associated with it. A RegistryValue can be thought of as 
-the tuple (name, datatype, value) associated with a RegistryKey. 
-python-registry supports all major datatypes, such as RegSZ, 
-RegDWord, and RegBin.
+Parameter:
+usage: shellbags.py [-h] [-v] [-p] file [file ...]
 
-To open a Windows Registry file, its this easy:
+Parse Shellbag entries from a Windows Registry.
 
+positional arguments:
+  file        Windows Registry hive file(s)
 
-  import sys
-  from Registry import Registry
+optional arguments:
+  -h, --help  show this help message and exit
+  -v          Print debugging information while parsing
+  -p          If debugging messages are enabled, augment the formatting with
+              ANSI color codes
 
-  reg = Registry.Registry(sys.argv[1])
-  Print all keys in a Registry
-
-  def rec(key, depth=0):
-      print "\t" * depth + key.path()
-    
-      for subkey in key.subkeys():
-          rec(subkey, depth + 1)
-
-  rec(reg.root())
-
-
-Find a key and print all string values
-
-
-  try:
-      key = reg.open("SOFTWARE\\Microsoft\\Windows\\Current Version\\Run")
-  except Registry.RegistryKeyNotFoundException:
-      print "Couldn't find Run key. Exiting..."
-      sys.exit(-1)
-
-  for value in [v for v key.values() \
-                     if v.value_type() == Registry.RegSZ or \
-                        v.value_type() == Registry.RegExpandSZ]:
-      print "%s: %s" % (value.name(), value.value())
-
-
-Advanced users who wish to study the structure of the Windows
-Registry may find the Registry.RegistryParse module useful. 
-This module implements all known structures of the Windows Registry, 
-with the exception of the big-block data chunks.
-
-Testing
--------
-python-registry was developed using Python 2.6.5 on 
-Ubuntu Linux.  More importantly, the package was tested against
-a small set of Windows XP SP3 Registry files acquired from
-one of the author's virtual machines.  The script
-testing/RegTester.py will parse the .reg files exported by 
-Microsoft Regedit and compare the values parsed by 
-python-registry.  This tool can be used to identify 
-regressions and deficiencies in the development of
-python-registry.
-
+Example: 
+$ python shellbags.py ~/projects/registry-files/willi/xp/NTUSER.DAT.copy0
+0|\My Documents (Shellbag)|0|0|0|0|0|978325200|978325200|18000|978325200
+0|\My Documents\Downloads (Shellbag)|0|0|0|0|0|1282762334|1282762334|18000|1281987456
+0|\My Documents\My Dropbox (Shellbag)|0|0|0|0|0|1281989096|1282762296|18000|1281989050
+0|\My Documents\My Music (Shellbag)|0|0|0|0|0|1281995426|1282239780|18000|1281987154
+0|\My Documents\My Pictures (Shellbag)|0|0|0|0|0|1281995426|1282239780|18000|1281987152
+0|\My Documents\My Dropbox (Shellbag)|0|0|0|0|0|978325200|978325200|18000|978325200
+0|\My Documents\My Dropbox\Tools (Shellbag)|0|0|0|0|0|1281989092|1281989092|18000|1281989088
+0|\My Documents\My Dropbox\Tools\Windows (Shellbag)|0|0|0|0|0|1281989140|1281989140|18000|1281989092
+0|\My Documents\My Dropbox\Tools\Windows\7zip (Shellbag)|0|0|0|0|0|1281993604|1284668784|18000|1281989140
+0|\My Documents\My Dropbox\Tools\Windows\Adobe (Shellbag)|0|0|0|0|0|1281994956|1284668784|18000|1281989140
+0|\My Documents\My Dropbox\Tools\Windows\Bitpim (Shellbag)|0|0|0|0|0|1281994656|1284668784|18000|1281989140
 
 Wanted
 ------
 *) Bug reports.
 *) Feedback.
 
-python-registry was originally developed to scratch one of
-the author's itches.  Now he hopes it can be of use to 
-someone outside of his lonely NYC apartment.
-
-
 License
 -------
-As of version 0.2.0, python-registry is released under the Apache 2.0 license.
-Before that, python-registry was released under the GPLv3.
-
+shellbags.py is released under the Apache 2.0 license.
 
 Sources
 -------
-Nearly all structure definitions used in python-registry
-came from one of two sources:
-1) WinReg.txt, by B.H., which may be accessed at:
-   http://pogostick.net/~pnh/ntpasswd/WinReg.txt
-2) The Windows NT Registry File Format version 0.4, by 
-   Timothy D. Morgan, which may be accessed at:
-   https://docs.google.com/viewer?url=http%3A%2F%2Fsentinelchicken.com%2Fdata%2FTheWindowsNTRegistryFileFormat.pdf   
-Copies of these resources are included in the 
-documentation/ directory of the python-registry source.
-
-
-The source directory for python-registry contains a sample/ 
-subdirectory that contains small programs that use python-registry. 
-For example, regview.py is a read-only clone of Microsoft Window's 
-Regedit, implemented in a few hundred lines.
-
+1) "Using shellbag information to reconstruct user activities" by 
+   Yuandong Zhu, Pavel Gladyshev, and Joshua James which may be
+   accessed http://www.dfrws.org/2009/proceedings/p69-zhu.pdf
+2) "MiTeC Registry Analyzer" by Allan S Hay, which may be accessed at
+   http://mysite.verizon.net/hartsec/files/WRA_Guidance.pdf
+3) "sbag" by TZWorks, which may be accessed at 
+   http://www.tzworks.net/prototype_page.php?proto_id=14
+4) "Shell BAG Format Analysis" by Yogesh Khatri, which may be accessed
+   at https://42llc.net/?p=385
+5) "Windows Shell Item format specification" by Joachim Metz, which
+   may be accessed at http://download.polytechnic.edu.na/pub4/download.sourceforge.net/pub/sourceforge/l/project/li/liblnk/Documentation/Windows%20Shell%20Item%20format/Windows%20Shell%20Item%20format.pdf
+   
