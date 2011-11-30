@@ -18,7 +18,7 @@
 #   limitations under the License.
 
 import re, sys, datetime, time
-import struct, array
+import struct
 import argparse
 from Registry import Registry
 
@@ -86,10 +86,10 @@ def debug(message):
         print "# [%sd%s] %s%s" % (Fore.GREEN, Fore.RESET, "".join(_g_indent), message)
 
 def warning(message):
-    print "# [%sw%s] %s%s" % (Fore.YELLOW, Fore.RESET, message)
+    print "# [%sw%s] %s" % (Fore.YELLOW, Fore.RESET, message)
 
 def error(message):
-    print "# [%se%s] %s%s" % (Fore.RED, Fore.RESET, message)
+    print "# [%se%s] %s" % (Fore.RED, Fore.RESET, message)
     sys.exit(-1)
 
 def date_safe(d):
@@ -386,12 +386,12 @@ class Block(object):
         o = self._offset + offset
 
         try:
-            bin = self._buf[o:o + 16]
+            _bin = self._buf[o:o + 16]
         except IndexError:
             raise OverrunBufferException(o, len(self._buf))
 
         # Yeah, this is ugly
-        h = map(ord, bin)
+        h = map(ord, _bin)
         return "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x" % \
             (h[3], h[2], h[1], h[0],
              h[5], h[4],
@@ -562,11 +562,8 @@ known_guids = {
     "62d8ed13-c9d0-4ce8-a914-47dd628fb1b0": "Regional and Language Options",
     "087da31b-0dd3-4537-8e23-64a18591f88b": "Windows Security Center",
     "58e3c745-d971-4081-9034-86e34b30836a": "Speech Recognition Options",
-    "cb1b7f8c-c50a-4176-b604-9e24dee8d4d1": "Welcome Center",
-    "37efd44d-ef8d-41b1-940d-96973a50e9e0": "Windows Sidebar Properties",
     # Windows 7 Control Panel Items
     "bb64f8a7-bee7-4e1a-ab8d-7d8273f7fdb6": "Action Center",
-    "b98a2bea-7d42-4558-8bd1-832f41bac6fd": "Backup and Restore",
     "0142e4d0-fb7a-11dc-ba4a-000ffe7ab428": "Biometric Devices",
     "1206f5f1-0569-412c-8fec-3204630dfb70": "Credential Manager",
     "00c6d95f-329c-409a-81d7-c46c66ea7f33": "Default Location",
@@ -575,16 +572,10 @@ known_guids = {
     "c555438b-3c23-4769-a71f-b6d3d9b6053a": "Display",
     "cb1b7f8c-c50a-4176-b604-9e24dee8d4d1": "Getting Started",
     "67ca7650-96e6-4fdd-bb43-a8e774f73a57": "HomeGroup",
-    "a0275511-0e86-4eca-97c2-ecd8f1221d08": "Infrared",
     "e9950154-c418-419e-a90a-20c5287ae24b": "Location and Other Sensors",
     "05d7b0f4-2121-4eff-bf6b-ed3f69b894d9": "Notification Area Icons",
-    "f82df8f7-8b9f-442e-a48c-818ea735ff9b": "Pen and Touch",
-    "40419485-c444-4567-851a-2dd7bfa1684d": "Phone and Modem",
     "9fe63afd-59cf-4419-9775-abcc3849f861": "Recovery",
-    "62d8ed13-c9d0-4ce8-a914-47dd628fb1b0": "Region and Language",
     "241d7c96-f8bf-4f85-b01f-e2b043341a4b": "RemoteApp and Desktop Connections",
-    "f2ddfc82-8f12-4cdd-b7dc-d4fe1425aa4d": "Sound",
-    "58e3c745-d971-4081-9034-86e34b30836a": "Speech Recognition",
     "c58c4893-3be0-4b45-abb5-a63e4b8c8651": "Troubleshooting",
     # Folder Types
     "0b2baaeb-0042-4dca-aa4d-3ee8648d03e5": "Pictures Library",
@@ -618,27 +609,27 @@ class SHITEM_FOLDERENTRY(SHITEM):
           (hex(self.offset()), self.name())
 
     def folder_id(self):
-        id = self.unpack_byte(self._off_folderid)
+        _id = self.unpack_byte(self._off_folderid)
         
-        if id == 0x00:
+        if _id == 0x00:
             return "INTERNET_EXPLORER"
-        elif id == 0x42:
+        elif _id == 0x42:
             return "LIBRARIES"
-        elif id == 0x44:
+        elif _id == 0x44:
             return "USERS"
-        elif id == 0x48:
+        elif _id == 0x48:
             return "MY_DOCUMENTS"
-        elif id == 0x50:
+        elif _id == 0x50:
             return "MY_COMPUTER"
-        elif id == 0x58:
+        elif _id == 0x58:
             return "NETWORK"
-        elif id == 0x60:
+        elif _id == 0x60:
             return "RECYCLE_BIN"
-        elif id == 0x68:
+        elif _id == 0x68:
             return "INTERNET_EXPLORER"
-        elif id == 0x70:
+        elif _id == 0x70:
             return "UKNOWN"
-        elif id == 0x80:
+        elif _id == 0x80:
             return "MY_GAMES"
         else:
             return ""
@@ -806,8 +797,8 @@ class Fileentry(SHITEM):
 
             off += 4 # unknown
         else:
-            self.cr_date = lambda x: datetime.datetime.min
-            self.a_date = lambda x: datetime.datetime.min
+            self.cr_date = lambda: datetime.datetime.min
+            self.a_date = lambda: datetime.datetime.min
 
         if self.ext_version() >= 0x0007:
             off += 8 # fileref
@@ -860,7 +851,7 @@ class SHITEM_FILEENTRY(Fileentry):
         debug("SHITEM_FILEENTRY @ %s." % (hex(offset)))
         super(SHITEM_FILEENTRY, self).__init__(buf, offset, parent, 0x4)
 
-        self.declare_field("byte", "flags", 0x3); 
+        self.declare_field("byte", "flags", 0x3)
 
     def __unicode__(self):
         return u"SHITEM_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
@@ -871,7 +862,7 @@ class ITEMPOS_FILEENTRY(Fileentry):
         super(ITEMPOS_FILEENTRY, self).__init__(buf, offset, parent, 0x4)
 
         self.declare_field("word", "size", 0x0) # override
-        self.declare_field("word", "flags", 0x2); 
+        self.declare_field("word", "flags", 0x2)
 
     def __unicode__(self):
         return u"ITEMPOS_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
@@ -911,44 +902,44 @@ class SHITEMLIST(Block):
 
     # UNKNOWN1
 
-            type = self.unpack_byte(off + 2)
-            if type == SHITEMTYPE.FILE_ENTRY0 or \
-               type == SHITEMTYPE.FILE_ENTRY1 or \
-               type == SHITEMTYPE.FILE_ENTRY2:
+            _type = self.unpack_byte(off + 2)
+            if _type == SHITEMTYPE.FILE_ENTRY0 or \
+               _type == SHITEMTYPE.FILE_ENTRY1 or \
+               _type == SHITEMTYPE.FILE_ENTRY2:
                 item = SHITEM_FILEENTRY(self._buf, off, self)
 
-            elif type == SHITEMTYPE.FOLDER_ENTRY:
+            elif _type == SHITEMTYPE.FOLDER_ENTRY:
                 item = SHITEM_FOLDERENTRY(self._buf, off, self)
 
-            elif type == SHITEMTYPE.VOLUME_NAME:
+            elif _type == SHITEMTYPE.VOLUME_NAME:
                 item = SHITEM_VOLUMEENTRY(self._buf, off, self)
 
-            elif type == SHITEMTYPE.NETWORK_VOLUME_NAME0 or \
-                 type == SHITEMTYPE.NETWORK_VOLUME_NAME1 or \
-                 type == SHITEMTYPE.NETWORK_VOLUME_NAME2 or \
-                 type == SHITEMTYPE.NETWORK_VOLUME_NAME3:
+            elif _type == SHITEMTYPE.NETWORK_VOLUME_NAME0 or \
+                 _type == SHITEMTYPE.NETWORK_VOLUME_NAME1 or \
+                 _type == SHITEMTYPE.NETWORK_VOLUME_NAME2 or \
+                 _type == SHITEMTYPE.NETWORK_VOLUME_NAME3:
                 item = SHITEM_NETWORKVOLUMEENTRY(self._buf, off, self)
 
-            elif type == SHITEMTYPE.NETWORK_SHARE:
+            elif _type == SHITEMTYPE.NETWORK_SHARE:
                 item = SHITEM_NETWORKSHAREENTRY(self._buf, off, self)
 
-            elif type == SHITEMTYPE.URI:
+            elif _type == SHITEMTYPE.URI:
                 item = SHITEM_URIENTRY(self._buf, off, self)
 
-            elif type == SHITEMTYPE.CONTROL_PANEL:
+            elif _type == SHITEMTYPE.CONTROL_PANEL:
                 item = SHITEM_CONTROLPANELENTRY(self._buf, off, self)
 
-            elif type == SHITEMTYPE.UNKNOWN0:
+            elif _type == SHITEMTYPE.UNKNOWN0:
                 item = SHITEM_UNKNOWNENTRY0(self._buf, off, self)
 
-            elif type == SHITEMTYPE.UNKNOWN2:
+            elif _type == SHITEMTYPE.UNKNOWN2:
                 item = SHITEM_UNKNOWNENTRY2(self._buf, off, self)
 
-            elif type == SHITEMTYPE.UNKNOWN3:
+            elif _type == SHITEMTYPE.UNKNOWN3:
                 item = SHITEM_UNKNOWNENTRY3(self._buf, off, self)
             
             else:
-                debug("Unknown type: %s" % hex(type))
+                debug("Unknown type: %s" % hex(_type))
                 item = SHITEM(self._buf, off, self)
 
             yield item
@@ -1049,13 +1040,13 @@ def get_shellbags(shell_key):
     shellbag_rec(bagmru_key, "", "")
     return shellbags
 
-def get_all_shellbags(registry):
+def get_all_shellbags(reg):
     """
     Given a python-registry Registry object, look for and return a
     list of shellbag items. A shellbag item is a dict with the keys
     (mtime, atime, crtime, path).
     Arguments:
-    - `registry`: A python-registry Registry object.
+    - `reg`: A python-registry Registry object.
     Throws:
     """
     shellbags = []
@@ -1071,7 +1062,7 @@ def get_all_shellbags(registry):
     for path in paths:
         try:
             debug("Processing: %s" % (path))
-            shell_key = registry.open(path)
+            shell_key = reg.open(path)
             new = get_shellbags(shell_key)
             debug("Found %s new shellbags" % (len(new)))
             shellbags.extend(new)
@@ -1080,7 +1071,7 @@ def get_all_shellbags(registry):
 
     return shellbags
 
-def shellbag_bodyfile(m, a, cr, path, source=False):
+def shellbag_bodyfile(m, a, cr, path):
     """
     Given the MAC timestamps and a path, return a Bodyfile v3 string entry
     formatted with the data.
