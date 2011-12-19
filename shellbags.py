@@ -341,6 +341,10 @@ class Block(object):
             if end - 2 <= o:
                 return ""
 
+            # BUG:
+            # This doesn't work for something like this: 
+            # \xFF \xFF A \x00 \x00 \x00
+            # +-------+ +----+ +-------+
             if self._buf[end - 2] == "\x00":
                 # then the last UTF-16 character was in the ASCII range
                 # and the \x00\x00 matched on the second half of the char
@@ -358,7 +362,10 @@ class Block(object):
             length = end - o
         else:
             length = ilength
-        return self._buf[self._offset + offset:self._offset + offset + length].decode("utf16").partition("\x00")[0]
+        try:
+            return self._buf[self._offset + offset:self._offset + offset + length].decode("utf16").partition("\x00")[0]
+        except UnicodeDecodeError: 
+            return self._buf[self._offset + offset:self._offset + offset + length + 1].decode("utf16").partition("\x00")[0]
 
     def unpack_dosdate(self, offset):
         """
