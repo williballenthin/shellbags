@@ -863,13 +863,88 @@ class SHITEM_FILEENTRY(Fileentry):
     def __unicode__(self):
         return u"SHITEM_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
 
-class ITEMPOS_FILEENTRY(Fileentry):
+class ITEMPOS_FILEENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
         debug("ITEMPOS_FILEENTRY @ %s." % (hex(offset)))
-        super(ITEMPOS_FILEENTRY, self).__init__(buf, offset, parent, 0x4)
+        super(ITEMPOS_FILEENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("word", "size", 0x0) # override
         self.declare_field("word", "flags", 0x2)
+
+        if self.flags() & 0xFF == 0xC3:
+            # network share type, printers, etc
+            self.declare_field("string", "long_name", 0x5)
+            return 
+
+        off = 4
+        self.declare_field("dword", "filesize", off); off += 4
+        self.declare_field("dosdate", "m_date", off); off += 4
+        self.declare_field("word", "fileattrs", off); off += 2
+        self.declare_field("string", "short_name", off)
+
+        off += len(self.short_name()) + 1
+        off = align(off, 2)
+
+        self.declare_field("word", "ext_size", off); off += 2
+        self.declare_field("word", "ext_version", off); off += 2
+
+        if self.ext_version() >= 0x03:
+            off += 4 # unknown
+
+            self.declare_field("dosdate", "cr_date", off); off += 4
+            self.declare_field("dosdate", "a_date", off); off += 4
+
+            off += 4 # unknown
+        else:
+            self.cr_date = lambda: datetime.datetime.min
+            self.a_date = lambda: datetime.datetime.min
+
+        if self.ext_version() >= 0x0007:
+            off += 8 # fileref
+            off += 8 # unknown
+
+            self._off_long_name_size = off
+            off += 2
+
+            if self.ext_version() >= 0x0008:
+                off += 4 # unknown
+
+            self._off_long_name = off
+            off += self.long_name_size()
+        elif self.ext_version() >= 0x0003:
+            self._off_long_name_size = False
+            self._off_long_name = off
+            debug("(WSTRING) long_name @ %s" % (hex(self.absolute_offset(off))))
+        else:
+            self._off_long_name_size = False
+            self._off_long_name = False
+
+
+    def __unicode__(self):
+        return u"ItemPos Fileentry @ %s: %s." % (hex(self.offset()), self.name())
+
+    def long_name_size(self):
+        if self._off_long_name_size:
+            return self._off_long_name_size
+        elif self._off_long_name:
+            return len(self.long_name()) + 2 
+        else:
+            return 0
+
+    def long_name(self):
+        if self._off_long_name and self._off_long_name_size:
+            return self.unpack_wstring(self._off_long_name, self.long_name_size())
+        elif self._off_long_name:
+            return self.unpack_wstring(self._off_long_name)
+        else:
+            return ""
+
+    def name(self):
+        n = self.long_name()
+        if len(n) > 0:
+            return n
+        else:
+            return self.short_name()
 
     def __unicode__(self):
         return u"ITEMPOS_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
