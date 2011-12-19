@@ -102,7 +102,7 @@ def date_safe(d):
     """
     try:
         return int(time.mktime(d.timetuple()))
-    except ValueError:
+    except ValueError, OverflowError:
         return int(time.mktime(datetime.datetime(1970, 1, 1, 0, 0, 0).timetuple()))
 
 ################ CLASS DEFINITIONS #############v
