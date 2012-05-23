@@ -1087,7 +1087,7 @@ def get_shellbags(shell_key):
                                 "mtime": item.m_date(),
                                 "atime": item.a_date(),
                                 "crtime": item.cr_date(),
-                                "source":  bag.path()
+                                "source":  bag.path() + " @ " + hex(item.offset())
                             })
                         offset += size
         except Registry.RegistryValueNotFoundException:
@@ -1111,7 +1111,7 @@ def get_shellbags(shell_key):
                     "mtime": item.m_date(),
                     "atime": item.a_date(),
                     "crtime": item.cr_date(),
-                    "source": key.path()
+                    "source": key.path() + " @ " + hex(item.offset())
                 })
 
             shellbag_rec(key.subkey(value.name()), 
@@ -1153,23 +1153,34 @@ def get_all_shellbags(reg):
 
     return shellbags
 
-def shellbag_bodyfile(m, a, cr, path):
+def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
     """
-    Given the MAC timestamps and a path, return a Bodyfile v3 string entry
-    formatted with the data.
+    Given the MAC timestamps and a path, print a Bodyfile v3 string entry
+    formatted with the data. We print instead of returning so we can handle
+    cases where the implicit string encoding conversion takes place as 
+    things are written to STDOUT.
     Arguments:
     - `m`: A Python datetime object representing the modified date.
     - `a`: A Python datetime object representing the accessed date.
     - `cr`: A Python datetime object representing the created date.
     - `path`: A string with the entry path.
+    - `fail_note`: An alternate path to print if an encoding error 
+         is encountered.
     Throws:
     """
     modified = date_safe(m)
     accessed = date_safe(a)
-    created = date_safe(cr)
-    changed = int(time.mktime(datetime.datetime(1970, 1, 1, 0, 0, 0).timetuple()))
-    return u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
-      (path, modified, accessed, changed, created)
+    created  = date_safe(cr)
+    changed  = int(time.mktime(datetime.datetime.min.timetuple()))
+    try:
+        print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
+          (path, modified, accessed, changed, created)
+    except UnicodeDecodeError:
+        print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
+          (fail_note, modified, accessed, changed, created)
+    except UnicodeEncodeError:
+        print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
+          (fail_note, modified, accessed, changed, created)
 
 ################ MAIN  #############
 
@@ -1194,10 +1205,8 @@ if __name__ == '__main__':
         registry = Registry.Registry(f)
 
         for shellbag in get_all_shellbags(registry):
-            try:
-                print shellbag_bodyfile(shellbag["mtime"], 
-                                        shellbag["atime"], 
-                                        shellbag["crtime"], 
-                                        shellbag["path"])
-            except UnicodeEncodeError:
-                warning("Failed printing path: " + str(list(shellbag["path"])))
+            print_shellbag_bodyfile(shellbag["mtime"], 
+                                    shellbag["atime"], 
+                                    shellbag["crtime"], 
+                                    shellbag["path"],
+                                    fail_note="Failed to parse entry name from: " + shellbag["source"])
