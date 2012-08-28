@@ -1091,7 +1091,13 @@ def get_shellbags(shell_key):
                             })
                         offset += size
         except Registry.RegistryValueNotFoundException:
+            debug("Registry.RegistryValueNotFoundException")
             pass
+        except Registry.RegistryKeyNotFoundException:
+            debug("Registry.RegistryKeyNotFoundException")
+            pass
+        except:
+            debug("Unexpected error %s" % sys.exc_info()[0])
 
         # Next, recurse into each BagMRU key
         for value in [value for value in key.values() \
