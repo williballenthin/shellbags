@@ -17,13 +17,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import re, sys, datetime, time
+import re
+import sys
+import datetime
+import time
 import struct
 import argparse
+import calendar
 from Registry import Registry
 
+
 ################ HACKY SETUP #############
-# Set placeholder values for Colorama 
+# Set placeholder values for Colorama
 # constants, so we can use them in our
 # code, even if Colorama is not installed
 class SimpleObject(object):
@@ -41,6 +46,7 @@ Fore.RESET = ""
 global _g_indent
 _g_indent = []
 
+
 ################ HELPERS #############
 def dosdate(dosdate, dostime):
     """
@@ -49,23 +55,24 @@ def dosdate(dosdate, dostime):
     returns: datetime.datetime or datetime.datetime.min on error
     """
     try:
-        t  = ord(dosdate[1]) << 8
+        t = ord(dosdate[1]) << 8
         t |= ord(dosdate[0])
-        day   = t & 0b0000000000011111
+        day = t & 0b0000000000011111
         month = (t & 0b0000000111100000) >> 5
-        year  = (t & 0b1111111000000000) >> 9
+        year = (t & 0b1111111000000000) >> 9
         year += 1980
-        
-        t  = ord(dostime[1]) << 8
+
+        t = ord(dostime[1]) << 8
         t |= ord(dostime[0])
-        sec     = t & 0b0000000000011111
-        sec    *= 2
-        minute  = (t & 0b0000011111100000) >> 5
-        hour    = (t & 0b1111100000000000) >> 11
+        sec = t & 0b0000000000011111
+        sec *= 2
+        minute = (t & 0b0000011111100000) >> 5
+        hour = (t & 0b1111100000000000) >> 11
 
         return datetime.datetime(year, month, day, hour, minute, sec)
     except:
         return datetime.datetime.min
+
 
 def align(offset, alignment):
     """
@@ -78,19 +85,24 @@ def align(offset, alignment):
         return offset
     return offset + (alignment - (offset % alignment))
 
+
 def debug(message):
     global _g_verbose
     if _g_verbose:
         global _g_indent
 
-        print "# [%sd%s] %s%s" % (Fore.GREEN, Fore.RESET, "".join(_g_indent), message)
+        print "# [%sd%s] %s%s" % (Fore.GREEN, Fore.RESET,
+                                  "".join(_g_indent), message)
+
 
 def warning(message):
     print "# [%sw%s] %s" % (Fore.YELLOW, Fore.RESET, message)
 
+
 def error(message):
     print "# [%se%s] %s" % (Fore.RED, Fore.RESET, message)
     sys.exit(-1)
+
 
 def date_safe(d):
     """
@@ -101,16 +113,16 @@ def date_safe(d):
     Throws:
     """
     try:
-        return int(time.mktime(d.timetuple()))
-    except ValueError, OverflowError:
-        return int(time.mktime(datetime.datetime(1970, 1, 1, 0, 0, 0).timetuple()))
+        return int(calendar.timegm(d.timetuple()))
+    except (ValueError, OverflowError):
+        return int(calendar.timegm(datetime.datetime(1970, 1, 1, 0, 0, 0).timetuple()))
 
 ################ CLASS DEFINITIONS #############v
 
 class ShellbagException(Exception):
     """
     Base Exception class for shellbag parsing.
-    """    
+    """
     def __init__(self, value):
         """
         Constructor.
@@ -128,7 +140,7 @@ class ShellbagException(Exception):
 
 class ParseException(ShellbagException):
     """
-    An exception to be thrown during parsing, such as 
+    An exception to be thrown during parsing, such as
     when an invalid header is encountered.
     """
     def __init__(self, value):
@@ -147,7 +159,7 @@ class ParseException(ShellbagException):
 
 class OverrunBufferException(ParseException):
     """
-    An exception to be thrown during parsing when something is unpack into 
+    An exception to be thrown during parsing when something is unpack into
     or from a location beyond the boundaries of a buffer.
     """
     def __init__(self, readOffs, bufLen):
@@ -161,7 +173,7 @@ class OverrunBufferException(ParseException):
         return u"Tried to parse beyond the end of the file (%s)" % (self._value)
 
 class Block(object):
-    """ 
+    """
     Base class for structured blocks used in parsing.
     A block is associated with a offset into a byte-string.
     """
@@ -190,7 +202,7 @@ class Block(object):
         This method will dynamically add corresponding offset and unpacker methods
           to this block.
         Arguments:
-        - `fields`: (Optional) A list of tuples to add. Otherwise, 
+        - `fields`: (Optional) A list of tuples to add. Otherwise,
             self._fields is used.
         """
         for field in fields:
@@ -198,8 +210,8 @@ class Block(object):
                 f = getattr(self, "unpack_" + field[0])
                 return f(*(field[2:]))
             setattr(self, field[1], handler)
-            debug("(%s) %s\t@ %s\t: %s" % (field[0].upper(), 
-                                         field[1], 
+            debug("(%s) %s\t@ %s\t: %s" % (field[0].upper(),
+                                         field[1],
                                          hex(self.absolute_offset(field[2])),
                                          str(handler())))
             setattr(self, "_off_" + field[1], field[2])
@@ -209,7 +221,7 @@ class Block(object):
         A shortcut to add a field.
         Arguments:
         - `type`: A string. Should be one of the unpack_* types.
-        - `name`: A string. 
+        - `name`: A string.
         - `offset`: A number.
         - `length`: (Optional) A number.
         """
@@ -323,8 +335,8 @@ class Block(object):
 
     def unpack_wstring(self, offset, ilength=False):
         """
-        Returns a UTF-16 decoded string from the relative offset with 
-        the given length, where each character is a wchar (2 bytes). 
+        Returns a UTF-16 decoded string from the relative offset with
+        the given length, where each character is a wchar (2 bytes).
         The string does not include the final
         NULL character.
         Arguments:
@@ -342,7 +354,7 @@ class Block(object):
                 return ""
 
             # BUG:
-            # This doesn't work for something like this: 
+            # This doesn't work for something like this:
             # \xFF \xFF A \x00 \x00 \x00
             # +-------+ +----+ +-------+
             if self._buf[end - 2] == "\x00":
@@ -351,25 +363,25 @@ class Block(object):
                 # and continued into the final null char
                 #
                 # eg.     \x00 A \x00 B \x00 \x00 \x00
-                #        ----+ +----+ +----+ +-------+      
+                #        ----+ +----+ +----+ +-------+
                 end += 1
             else:
                 # the \x00\x00 matched on the final null
                 #
                 # eg.     A \x00 \xFF \xFF \x00 \x00
-                #         +----+ +-------+ +-------+ 
+                #         +----+ +-------+ +-------+
                 pass
             length = end - o
         else:
             length = ilength
         try:
             return self._buf[self._offset + offset:self._offset + offset + length].decode("utf16").partition("\x00")[0]
-        except UnicodeDecodeError: 
+        except UnicodeDecodeError:
             return self._buf[self._offset + offset:self._offset + offset + length + 1].decode("utf16").partition("\x00")[0]
 
     def unpack_dosdate(self, offset):
         """
-        Returns a datetime from the DOSDATE and DOSTIME starting at 
+        Returns a datetime from the DOSDATE and DOSTIME starting at
         the relative offset.
         Arguments:
         - `offset`: The relative offset from the start of the block.
@@ -416,14 +428,14 @@ class Block(object):
 
     def parent(self):
         """
-        Get the parent block. See the class documentation for what the 
+        Get the parent block. See the class documentation for what the
         parent link is.
         """
         return self._parent
 
     def offset(self):
         """
-        Equivalent to self.absolute_offset(0x0), which is the starting 
+        Equivalent to self.absolute_offset(0x0), which is the starting
         offset of this block.
         """
         return self._offset
@@ -460,7 +472,7 @@ class SHITEM(Block):
 
     def __unicode__(self):
         return u"SHITEM @ %s." % (hex(self.offset()))
-        
+
     def name(self):
         return "??"
 
@@ -512,7 +524,7 @@ known_guids = {
     "dfdf76a2-c82a-4d63-906a-5644ac457385": "Public",
     "de974d24-d9c6-4d3e-bf91-f4455120b917": "Common Files",
     "ed228fdf-9ea8-4870-83b1-96b02cfe0d52": "My Games",
-    "f02c1a0d-be21-4350-88b0-7367fc96ef3c": "Network", 
+    "f02c1a0d-be21-4350-88b0-7367fc96ef3c": "Network",
     "f38bf404-1d43-42f2-9305-67de0b28fc23": "Windows",
     "f3ce0f7c-4901-4acc-8648-d5d44b04ef8f": "Users Files",
     "fdd39ad0-238f-46af-adb4-6c85480369c7": "Documents",
@@ -607,7 +619,7 @@ class SHITEM_FOLDERENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
         debug("SHITEM_FOLDERENTRY @ %s." % (hex(offset)))
         super(SHITEM_FOLDERENTRY, self).__init__(buf, offset, parent)
-        
+
         self._off_folderid = 0x3      # UINT8
         self.declare_field("guid", "guid", 0x4)
 
@@ -617,7 +629,7 @@ class SHITEM_FOLDERENTRY(SHITEM):
 
     def folder_id(self):
         _id = self.unpack_byte(self._off_folderid)
-        
+
         if _id == 0x00:
             return "INTERNET_EXPLORER"
         elif _id == 0x42:
@@ -651,8 +663,8 @@ class SHITEM_UNKNOWNENTRY0(SHITEM):
     def __init__(self, buf, offset, parent):
         debug("SHITEM_UNKNOWNENTRY0 @ %s." % (hex(offset)))
         super(SHITEM_UNKNOWNENTRY0, self).__init__(buf, offset, parent)
-        
-        self.declare_field("word", "size", 0x0) 
+
+        self.declare_field("word", "size", 0x0)
         if self.size() == 0x20:
             self.declare_field("guid", "guid", 0xE)
         # pretty much completely unknown
@@ -834,7 +846,7 @@ class Fileentry(SHITEM):
         if self._off_long_name_size:
             return self._off_long_name_size
         elif self._off_long_name:
-            return len(self.long_name()) + 2 
+            return len(self.long_name()) + 2
         else:
             return 0
 
@@ -874,7 +886,7 @@ class ITEMPOS_FILEENTRY(SHITEM):
         if self.flags() & 0xFF == 0xC3:
             # network share type, printers, etc
             self.declare_field("string", "long_name", 0x5)
-            return 
+            return
 
         off = 4
         self.declare_field("dword", "filesize", off); off += 4
@@ -927,7 +939,7 @@ class ITEMPOS_FILEENTRY(SHITEM):
         if self._off_long_name_size:
             return self._off_long_name_size
         elif self._off_long_name:
-            return len(self.long_name()) + 2 
+            return len(self.long_name()) + 2
         else:
             return 0
 
@@ -954,7 +966,7 @@ class SHITEM_UNKNOWNENTRY3(Fileentry):
         debug("SHITEM_UNKNOWNENTRY3 @ %s." % (hex(offset)))
         super(SHITEM_UNKNOWNENTRY3, self).__init__(buf, offset, parent, 0x4)
 
-        self.declare_field("word", "size", 0x0) 
+        self.declare_field("word", "size", 0x0)
         # most of this is unknown
         offs = 0x18
         self.declare_field("string", "short_name", offs)
@@ -1019,7 +1031,7 @@ class SHITEMLIST(Block):
 
             elif _type == SHITEMTYPE.UNKNOWN3:
                 item = SHITEM_UNKNOWNENTRY3(self._buf, off, self)
-            
+
             else:
                 debug("Unknown type: %s" % hex(_type))
                 item = SHITEM(self._buf, off, self)
@@ -1050,9 +1062,9 @@ def get_shellbags(shell_key):
         Function to recursively parse the BagMRU Registry key structure.
         Arguments:
         `key`: The current 'BagsMRU' key to recurse into.
-        `bag_prefix`: A string containing the current subkey path of 
+        `bag_prefix`: A string containing the current subkey path of
             the relevant 'Bags' key. It will look something like '1\\2\\3\\4'.
-        `path_prefix` A string containing the current human-readable, 
+        `path_prefix` A string containing the current human-readable,
             file system path so far constructed.
         Throws:
         """
@@ -1071,7 +1083,7 @@ def get_shellbags(shell_key):
 
                     block = Block(buf, 0x0, False)
                     offset = 0x10
-                
+
                     while True:
                         offset += 0x8
                         size = block.unpack_word(offset)
@@ -1102,9 +1114,9 @@ def get_shellbags(shell_key):
         # Next, recurse into each BagMRU key
         for value in [value for value in key.values() \
                       if re.match("\d+", value.name())]:
-            debug("%sBagMRU value %s%s (%s)" % (Fore.BLUE, 
-                                                value.name(), 
-                                                Fore.RESET, 
+            debug("%sBagMRU value %s%s (%s)" % (Fore.BLUE,
+                                                value.name(),
+                                                Fore.RESET,
                                                 key.path()))
             l = SHITEMLIST(value.value(), 0, False)
             for item in l.items():
@@ -1120,8 +1132,8 @@ def get_shellbags(shell_key):
                     "source": key.path() + " @ " + hex(item.offset())
                 })
 
-            shellbag_rec(key.subkey(value.name()), 
-                         bag_prefix + "\\" + value.name(), 
+            shellbag_rec(key.subkey(value.name()),
+                         bag_prefix + "\\" + value.name(),
                          path)
         _g_indent.pop(0)
 
@@ -1163,21 +1175,21 @@ def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
     """
     Given the MAC timestamps and a path, print a Bodyfile v3 string entry
     formatted with the data. We print instead of returning so we can handle
-    cases where the implicit string encoding conversion takes place as 
+    cases where the implicit string encoding conversion takes place as
     things are written to STDOUT.
     Arguments:
     - `m`: A Python datetime object representing the modified date.
     - `a`: A Python datetime object representing the accessed date.
     - `cr`: A Python datetime object representing the created date.
     - `path`: A string with the entry path.
-    - `fail_note`: An alternate path to print if an encoding error 
+    - `fail_note`: An alternate path to print if an encoding error
          is encountered.
     Throws:
     """
     modified = date_safe(m)
     accessed = date_safe(a)
     created  = date_safe(cr)
-    changed  = int(time.mktime(datetime.datetime.min.timetuple()))
+    changed  = int(calendar.timegm(datetime.datetime.min.timetuple()))
     try:
         print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
           (path, modified, accessed, changed, created)
@@ -1211,8 +1223,8 @@ if __name__ == '__main__':
         registry = Registry.Registry(f)
 
         for shellbag in get_all_shellbags(registry):
-            print_shellbag_bodyfile(shellbag["mtime"], 
-                                    shellbag["atime"], 
-                                    shellbag["crtime"], 
+            print_shellbag_bodyfile(shellbag["mtime"],
+                                    shellbag["atime"],
+                                    shellbag["crtime"],
                                     shellbag["path"],
                                     fail_note="Failed to parse entry name from: " + shellbag["source"])
