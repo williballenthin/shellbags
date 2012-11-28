@@ -373,7 +373,9 @@ class Block(object):
                 pass
             length = end - o
         else:
-            length = ilength
+            o = self._offset + offset
+            end = self._buf.find("\x00\x00\x00", o)
+            length = min(ilength, end - o)
         try:
             return self._buf[self._offset + offset:self._offset + offset + length].decode("utf16").partition("\x00")[0]
         except UnicodeDecodeError:
