@@ -24,7 +24,7 @@ This hive should be acquired forensically.
 To ensure interoperability, output is formatted according to the Bodyfile specification by default.
 
 Parameters:
-usage: shellbags.py [-h] [-v] [-p] file [file ...]
+usage: shellbags.py [-h] [-v] [-p] [-o {csv,bodyfile}] file [file ...]
 
 Parse Shellbag entries from a Windows Registry.
 
@@ -36,6 +36,7 @@ optional arguments:
   -v          Print debugging information while parsing
   -p          If debugging messages are enabled, augment the formatting with
               ANSI color codes
+  -o {csv,bodyfile}  Output format: csv or bodyfile; default is bodyfile
 
 Example: 
 $ python shellbags.py ~/projects/registry-files/willi/xp/NTUSER.DAT.copy0
