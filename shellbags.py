@@ -24,6 +24,7 @@ import time
 import struct
 import argparse
 import calendar
+import csv
 from Registry import Registry
 
 
@@ -116,6 +117,13 @@ def date_safe(d):
         return int(calendar.timegm(d.timetuple()))
     except (ValueError, OverflowError):
         return int(calendar.timegm(datetime.datetime(1970, 1, 1, 0, 0, 0).timetuple()))
+
+def date_safe_str(d):
+    try:
+        return d.strftime("%m/%d/%Y %H:%M:%S")
+    except:
+        return "01/01/1970 00:00:00"
+
 
 ################ CLASS DEFINITIONS #############v
 
@@ -1099,7 +1107,9 @@ def get_shellbags(shell_key):
                                 "mtime": item.m_date(),
                                 "atime": item.a_date(),
                                 "crtime": item.cr_date(),
-                                "source":  bag.path() + " @ " + hex(item.offset())
+                                "source":  bag.path() + " @ " + hex(item.offset()),
+                                "regsource" : bag.path() + "\\" + value.name(),
+                                "klwt" : key.timestamp() 
                             })
                         offset += size
         except Registry.RegistryValueNotFoundException:
@@ -1129,7 +1139,9 @@ def get_shellbags(shell_key):
                     "mtime": item.m_date(),
                     "atime": item.a_date(),
                     "crtime": item.cr_date(),
-                    "source": key.path() + " @ " + hex(item.offset())
+                    "source": key.path() + " @ " + hex(item.offset()),
+                    "regsource": key.path() + "\\" + value.name(),
+                    "klwt" :  key.timestamp()
                 })
 
             shellbag_rec(key.subkey(value.name()),
@@ -1171,6 +1183,20 @@ def get_all_shellbags(reg):
 
     return shellbags
 
+def print_shellbag_csv(shellbags, regfile):
+    stdoutWriter = csv.writer(sys.stdout)
+    stdoutWriter.writerow(["Key Last Write Time","Hive", "Modification Date", "Accessed Date", "Creation Date", "Path", "Key"])
+    for shellbag in shellbags:
+        modified = date_safe_str(shellbag["mtime"])
+        accessed = date_safe_str(shellbag["atime"])
+        created = date_safe_str(shellbag["crtime"])
+        keymod = date_safe_str(shellbag["klwt"])
+        try:
+            stdoutWriter.writerow([keymod, regfile,  modified, accessed, created, shellbag["path"],shellbag["regsource"]])
+        except:
+            stdoutWriter.writerow([keymod, regfile, modified, accessed, created, "Unprintable Shellbag", shellbag["regsource"]])
+
+
 def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
     """
     Given the MAC timestamps and a path, print a Bodyfile v3 string entry
@@ -1208,6 +1234,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', action='store_true', dest="vverbose", help="Print debugging information while parsing")
     parser.add_argument('-p', action='store_true', dest="pretty", help="If debugging messages are enabled, augment the formatting with ANSI color codes")
     parser.add_argument('file', nargs='+', help="Windows Registry hive file(s)")
+    parser.add_argument('-o', choices=['csv','bodyfile'],dest='fmt',help='Output format: csv or bodyfile')
     args = parser.parse_args()
 
     if args.vverbose:
@@ -1222,9 +1249,16 @@ if __name__ == '__main__':
     for f in args.file:
         registry = Registry.Registry(f)
 
-        for shellbag in get_all_shellbags(registry):
-            print_shellbag_bodyfile(shellbag["mtime"],
-                                    shellbag["atime"],
-                                    shellbag["crtime"],
-                                    shellbag["path"],
-                                    fail_note="Failed to parse entry name from: " + shellbag["source"])
+        parsed_shellbags = get_all_shellbags(registry)
+
+        if args.fmt == 'csv':
+            print_shellbag_csv(parsed_shellbags, f)
+        elif args.fmt == 'bodyfile':
+            for shellbag in parsed_shellbags:
+                print_shellbag_bodyfile(shellbag["mtime"], 
+                                        shellbag["atime"], 
+                                        shellbag["crtime"], 
+                                        shellbag["path"],
+                                        fail_note="Failed to parse entry name from: " + shellbag["source"])
+        else:
+            print "Error: Unsupported output format"
