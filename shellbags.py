@@ -1234,7 +1234,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', action='store_true', dest="vverbose", help="Print debugging information while parsing")
     parser.add_argument('-p', action='store_true', dest="pretty", help="If debugging messages are enabled, augment the formatting with ANSI color codes")
     parser.add_argument('file', nargs='+', help="Windows Registry hive file(s)")
-    parser.add_argument('-o', choices=['csv','bodyfile'],dest='fmt',help='Output format: csv or bodyfile')
+    parser.add_argument('-o', choices=['csv','bodyfile'],dest='fmt', default='bodyfile',help='Output format: csv or bodyfile; default is bodyfile')
     args = parser.parse_args()
 
     if args.vverbose:
