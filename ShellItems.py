@@ -419,7 +419,7 @@ class Fileentry(SHITEM):
 
     def long_name_size(self):
         if self._off_long_name_size:
-            return self._off_long_name_size
+            return self.unpack_word(self._off_long_name_size)
         elif self._off_long_name:
             return len(self.long_name()) + 2
         else:
