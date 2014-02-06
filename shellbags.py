@@ -109,7 +109,7 @@ def get_shellbags(shell_key):
             # First, consider the current key, and extract shellbag items
             slot = key.value("NodeSlot").value()
             for bag in bags_key.subkey(str(slot)).subkeys():
-                for value in [value for value in bag.values() if \
+                for value in [value for value in bag.values() if
                               "ItemPos" in value.name()]:
                     buf = value.value()
                     debug("Slot %s ITEMPOS @ %s" % (str(slot), value.name()))
@@ -133,8 +133,8 @@ def get_shellbags(shell_key):
                                 "atime": item.a_date(),
                                 "crtime": item.cr_date(),
                                 "source":  bag.path() + " @ " + hex(item.offset()),
-                                "regsource" : bag.path() + "\\" + value.name(),
-                                "klwt" : key.timestamp() 
+                                "regsource": bag.path() + "\\" + value.name(),
+                                "klwt": key.timestamp()
                             })
                         offset += size
         except Registry.RegistryValueNotFoundException:
@@ -147,10 +147,10 @@ def get_shellbags(shell_key):
             debug("Unexpected error %s" % sys.exc_info()[0])
 
         # Next, recurse into each BagMRU key
-        for value in [value for value in key.values() \
+        for value in [value for value in key.values()
                       if re.match("\d+", value.name())]:
-            debug("BagMRU value %s (%s)" % (    value.name(),
-                                                key.path()))
+            debug("BagMRU value %s (%s)" % (value.name(),
+                                            key.path()))
             l = SHITEMLIST(value.value(), 0, False)
             for item in l.items():
                 # assume there is only one entry in the value, or take the last
@@ -164,7 +164,7 @@ def get_shellbags(shell_key):
                     "crtime": item.cr_date(),
                     "source": key.path() + " @ " + hex(item.offset()),
                     "regsource": key.path() + "\\" + value.name(),
-                    "klwt" :  key.timestamp()
+                    "klwt":  key.timestamp()
                 })
 
             shellbag_rec(key.subkey(value.name()),
@@ -207,18 +207,25 @@ def get_all_shellbags(reg):
 
     return shellbags
 
+
 def print_shellbag_csv(shellbags, regfile):
     stdoutWriter = csv.writer(sys.stdout)
-    stdoutWriter.writerow(["Key Last Write Time","Hive", "Modification Date", "Accessed Date", "Creation Date", "Path", "Key"])
+    stdoutWriter.writerow(["Key Last Write Time", "Hive",
+                           "Modification Date", "Accessed Date",
+                           "Creation Date", "Path", "Key"])
     for shellbag in shellbags:
         modified = date_safe_str(shellbag["mtime"])
         accessed = date_safe_str(shellbag["atime"])
         created = date_safe_str(shellbag["crtime"])
         keymod = date_safe_str(shellbag["klwt"])
         try:
-            stdoutWriter.writerow([keymod, regfile,  modified, accessed, created, shellbag["path"],shellbag["regsource"]])
+            stdoutWriter.writerow([keymod, regfile, modified,
+                                   accessed, created,
+                                   shellbag["path"], shellbag["regsource"]])
         except:
-            stdoutWriter.writerow([keymod, regfile, modified, accessed, created, "Unprintable Shellbag", shellbag["regsource"]])
+            stdoutWriter.writerow([keymod, regfile, modified,
+                                   accessed, created, "Unprintable Shellbag",
+                                   shellbag["regsource"]])
 
 
 def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
@@ -238,8 +245,8 @@ def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
     """
     modified = date_safe(m)
     accessed = date_safe(a)
-    created  = date_safe(cr)
-    changed  = int(calendar.timegm(datetime.datetime.min.timetuple()))
+    created = date_safe(cr)
+    changed = int(calendar.timegm(datetime.datetime.min.timetuple()))
     try:
         print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
           (path, modified, accessed, changed, created)
@@ -254,9 +261,13 @@ def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parse Shellbag entries from a Windows Registry.')
-    parser.add_argument('-v', action='store_true', dest="vverbose", help="Print debugging information while parsing")
-    parser.add_argument('file', nargs='+', help="Windows Registry hive file(s)")
-    parser.add_argument('-o', choices=['csv','bodyfile'],dest='fmt', default='bodyfile',help='Output format: csv or bodyfile; default is bodyfile')
+    parser.add_argument('-v', action='store_true', dest="vverbose",
+                        help="Print debugging information while parsing")
+    parser.add_argument('file', nargs='+',
+                        help="Windows Registry hive file(s)")
+    parser.add_argument('-o', choices=['csv', 'bodyfile'],
+                        dest='fmt', default='bodyfile',
+                        help='Output format: csv or bodyfile; default is bodyfile')
     args = parser.parse_args()
 
     if args.vverbose:
@@ -273,9 +284,9 @@ if __name__ == '__main__':
             print_shellbag_csv(parsed_shellbags, f)
         elif args.fmt == 'bodyfile':
             for shellbag in parsed_shellbags:
-                print_shellbag_bodyfile(shellbag["mtime"], 
-                                        shellbag["atime"], 
-                                        shellbag["crtime"], 
+                print_shellbag_bodyfile(shellbag["mtime"],
+                                        shellbag["atime"],
+                                        shellbag["crtime"],
                                         shellbag["path"],
                                         fail_note="Failed to parse entry name from: " + shellbag["source"])
         else:
