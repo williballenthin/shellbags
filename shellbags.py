@@ -77,6 +77,7 @@ class ShellbagException(Exception):
     def __unicode__(self):
         return u"Shellbag Exception: %s" % (self._value)
 
+
 ################ PROGRAM FUNCTIONS #############
 
 def get_shellbags(shell_key):
@@ -249,25 +250,25 @@ def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
     changed = int(calendar.timegm(datetime.datetime.min.timetuple()))
     try:
         print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
-          (path, modified, accessed, changed, created)
+            (path, modified, accessed, changed, created)
     except UnicodeDecodeError:
         print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
-          (fail_note, modified, accessed, changed, created)
+            (fail_note, modified, accessed, changed, created)
     except UnicodeEncodeError:
         print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
-          (fail_note, modified, accessed, changed, created)
+            (fail_note, modified, accessed, changed, created)
 
 ################ MAIN  #############
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Parse Shellbag entries from a Windows Registry.')
-    parser.add_argument('-v', action='store_true', dest="vverbose",
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Parse Shellbag entries from a Windows Registry.")
+    parser.add_argument("-v", action="store_true", dest="vverbose",
                         help="Print debugging information while parsing")
-    parser.add_argument('file', nargs='+',
+    parser.add_argument("file", nargs="+",
                         help="Windows Registry hive file(s)")
-    parser.add_argument('-o', choices=['csv', 'bodyfile'],
-                        dest='fmt', default='bodyfile',
-                        help='Output format: csv or bodyfile; default is bodyfile')
+    parser.add_argument("-o", choices=["csv", "bodyfile"],
+                        dest="fmt", default="bodyfile",
+                        help="Output format: csv or bodyfile; default is bodyfile")
     args = parser.parse_args()
 
     if args.vverbose:
@@ -280,9 +281,9 @@ if __name__ == '__main__':
 
         parsed_shellbags = get_all_shellbags(registry)
 
-        if args.fmt == 'csv':
+        if args.fmt == "csv":
             print_shellbag_csv(parsed_shellbags, f)
-        elif args.fmt == 'bodyfile':
+        elif args.fmt == "bodyfile":
             for shellbag in parsed_shellbags:
                 print_shellbag_bodyfile(shellbag["mtime"],
                                         shellbag["atime"],
