@@ -3,6 +3,7 @@ import datetime
 from BinaryParser import Block
 from BinaryParser import debug
 from BinaryParser import align
+from BinaryParser import OverrunBufferException
 
 
 class SHITEMTYPE:
@@ -449,7 +450,8 @@ class SHITEM_FILEENTRY(Fileentry):
         self.declare_field("byte", "flags", 0x3)
 
     def __unicode__(self):
-        return u"SHITEM_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
+        return u"SHITEM_FILEENTRY @ %s: %s." % (hex(self.offset()),
+                                                self.name())
 
 
 class ITEMPOS_FILEENTRY(SHITEM):
@@ -457,7 +459,7 @@ class ITEMPOS_FILEENTRY(SHITEM):
         debug("ITEMPOS_FILEENTRY @ %s." % (hex(offset)))
         super(ITEMPOS_FILEENTRY, self).__init__(buf, offset, parent)
 
-        self.declare_field("word", "size", 0x0) # override
+        self.declare_field("word", "size", 0x0)  # override
         self.declare_field("word", "flags", 0x2)
 
         if self.flags() & 0xFF == 0xC3:
@@ -478,25 +480,25 @@ class ITEMPOS_FILEENTRY(SHITEM):
         self.declare_field("word", "ext_version", off); off += 2
 
         if self.ext_version() >= 0x03:
-            off += 4 # unknown
+            off += 4  # unknown
 
             self.declare_field("dosdate", "cr_date", off); off += 4
             self.declare_field("dosdate", "a_date", off); off += 4
 
-            off += 4 # unknown
+            off += 4  # unknown
         else:
             self.cr_date = lambda: datetime.datetime.min
             self.a_date = lambda: datetime.datetime.min
 
         if self.ext_version() >= 0x0007:
-            off += 8 # fileref
-            off += 8 # unknown
+            off += 8  # fileref
+            off += 8  # unknown
 
             self._off_long_name_size = off
             off += 2
 
             if self.ext_version() >= 0x0008:
-                off += 4 # unknown
+                off += 4  # unknown
 
             self._off_long_name = off
             off += self.long_name_size()
@@ -534,6 +536,27 @@ class ITEMPOS_FILEENTRY(SHITEM):
     def __unicode__(self):
         return u"ITEMPOS_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
 
+
+class FILEENTRY_FRAGMENT(SHITEM):
+    def __init__(self, buf, offset, parent, filesize_offset):
+        debug("FILEENTRY_FRAGMENT @ %s." % (hex(offset)))
+        super(FILEENTRY_FRAGMENT, self).__init__(buf, offset, parent)
+
+        off = filesize_offset
+        self.declare_field("dword", "filesize", off); off += 4
+        self.declare_field("dosdate", "m_date", off); off += 4
+        self.declare_field("word", "fileattrs", off); off += 2
+        self.declare_field("string", "short_name", off)
+
+        off += len(self.short_name()) + 1
+        off = align(off, 2)
+
+    def name(self):
+        return self.short_name()
+
+    def __unicode__(self):
+        return u"ITEMPOS_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
+        
 
 class SHITEM_UNKNOWNENTRY3(Fileentry):
     def __init__(self, buf, offset, parent):
@@ -575,7 +598,10 @@ class SHITEMLIST(Block):
             if _type == SHITEMTYPE.FILE_ENTRY0 or \
                _type == SHITEMTYPE.FILE_ENTRY1 or \
                _type == SHITEMTYPE.FILE_ENTRY2:
-                item = SHITEM_FILEENTRY(self._buf, off, self)
+                try:
+                    item = SHITEM_FILEENTRY(self._buf, off, self)
+                except OverrunBufferException:
+                    item = FILEENTRY_FRAGMENT(self._buf, off, self, 0x4)
 
             elif _type == SHITEMTYPE.FOLDER_ENTRY:
                 item = SHITEM_FOLDERENTRY(self._buf, off, self)
