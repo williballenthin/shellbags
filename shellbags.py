@@ -31,6 +31,7 @@ from BinaryParser import debug_increase_indent
 from BinaryParser import debug_decrease_indent
 from BinaryParser import debug_enable
 from BinaryParser import debug_disable
+from BinaryParser import OverrunBufferException
 from ShellItems import SHITEMLIST
 from ShellItems import ITEMPOS_FILEENTRY
 
@@ -152,21 +153,27 @@ def get_shellbags(shell_key):
                       if re.match("\d+", value.name())]:
             debug("BagMRU value %s (%s)" % (value.name(),
                                             key.path()))
-            l = SHITEMLIST(value.value(), 0, False)
-            for item in l.items():
-                # assume there is only one entry in the value, or take the last
-                # as the path component
-                debug("Name: " + item.name())
-                path = path_prefix + "\\" + item.name()
-                shellbags.append({
-                    "path":  path,
-                    "mtime": item.m_date(),
-                    "atime": item.a_date(),
-                    "crtime": item.cr_date(),
-                    "source": key.path() + " @ " + hex(item.offset()),
-                    "regsource": key.path() + "\\" + value.name(),
-                    "klwt":  key.timestamp()
-                })
+            try:  # TODO(wb): removeme
+                l = SHITEMLIST(value.value(), 0, False)
+                for item in l.items():
+                    # assume there is only one entry in the value, or take the last
+                    # as the path component
+                    debug("Name: " + item.name())
+                    path = path_prefix + "\\" + item.name()
+                    shellbags.append({
+                        "path":  path,
+                        "mtime": item.m_date(),
+                        "atime": item.a_date(),
+                        "crtime": item.cr_date(),
+                        "source": key.path() + " @ " + hex(item.offset()),
+                        "regsource": key.path() + "\\" + value.name(),
+                        "klwt":  key.timestamp()
+                    })
+            except OverrunBufferException:
+                print key.path()
+                print value.name()
+                raise
+
 
             shellbag_rec(key.subkey(value.name()),
                          bag_prefix + "\\" + value.name(),
@@ -257,6 +264,7 @@ def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
     except UnicodeEncodeError:
         print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
             (fail_note, modified, accessed, changed, created)
+
 
 ################ MAIN  #############
 
