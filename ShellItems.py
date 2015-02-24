@@ -428,7 +428,10 @@ class Fileentry(SHITEM):
 
     def long_name(self):
         if self._off_long_name and self._off_long_name_size:
-            return self.unpack_wstring(self._off_long_name, self.long_name_size())
+            if self.long_name_size() == 0:
+                return ""
+            else:
+                return self.unpack_wstring(self._off_long_name, self.long_name_size())
         elif self._off_long_name:
             return self.unpack_wstring(self._off_long_name)
         else:
