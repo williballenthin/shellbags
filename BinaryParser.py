@@ -1,46 +1,9 @@
 import sys
 import struct
+import logging
 import datetime
 
-
-_g_verbose = False
-_g_indent = ""
-
-
-def debug_increase_indent():
-    global _g_indent 
-    _g_indent += "  "
-
-
-def debug_decrease_indent():
-    global _g_indent 
-    _g_indent = _g_indent[:2]
-
-
-def debug_enable():
-    global _g_verbose
-    _g_verbose = True
-
-
-def debug_disable():
-    global _g_verbose
-    _g_verbose = False
-
-
-def debug(message):
-    global _g_verbose
-    if _g_verbose:
-        global _g_indent
-        print "# [d] %s%s" % ("".join(_g_indent), message)
-
-
-def warning(message):
-    print "# [w] %s" % (message)
-
-
-def error(message):
-    print "# [e] %s" % (message)
-    sys.exit(-1)
+g_logger = logging.getLogger("BinaryParser")
 
 
 def dosdate(dosdate, dostime):
@@ -155,7 +118,7 @@ class Block(object):
                 f = getattr(self, "unpack_" + field[0])
                 return f(*(field[2:]))
             setattr(self, field[1], handler)
-            debug("(%s) %s\t@ %s\t: %s" % (field[0].upper(),
+            g_logger.debug("(%s) %s\t@ %s\t: %s" % (field[0].upper(),
                                          field[1],
                                          hex(self.absolute_offset(field[2])),
                                          str(handler())))
