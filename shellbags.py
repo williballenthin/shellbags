@@ -153,6 +153,7 @@ def get_shellbags(shell_key):
                       if re.match("\d+", value.name())]:
             debug("BagMRU value %s (%s)" % (value.name(),
                                             key.path()))
+            path = ""
             try:  # TODO(wb): removeme
                 l = SHITEMLIST(value.value(), 0, False)
                 for item in l.items():
@@ -173,7 +174,6 @@ def get_shellbags(shell_key):
                 print key.path()
                 print value.name()
                 raise
-
 
             shellbag_rec(key.subkey(value.name()),
                          bag_prefix + "\\" + value.name(),

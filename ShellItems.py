@@ -1,9 +1,12 @@
 import datetime
+import logging
 
 from BinaryParser import Block
-from BinaryParser import debug
 from BinaryParser import align
 from BinaryParser import OverrunBufferException
+
+
+g_logger = logging.getLogger("ShellItems")
 
 
 class SHITEMTYPE:
@@ -35,7 +38,7 @@ class SHITEM(Block):
 
         self.declare_field("word", "size", 0x0)
         self.declare_field("byte", "type", 0x2)
-        debug("SHITEM @ %s of type %s." % (hex(offset), hex(self.type())))
+        g_logger.debug("SHITEM @ %s of type %s.", hex(offset), hex(self.type()))
 
     def __unicode__(self):
         return u"SHITEM @ %s." % (hex(self.offset()))
@@ -185,7 +188,7 @@ known_guids = {
 
 class SHITEM_FOLDERENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_FOLDERENTRY @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_FOLDERENTRY @ %s.", hex(offset))
         super(SHITEM_FOLDERENTRY, self).__init__(buf, offset, parent)
 
         self._off_folderid = 0x3      # UINT8
@@ -230,7 +233,7 @@ class SHITEM_FOLDERENTRY(SHITEM):
 
 class SHITEM_UNKNOWNENTRY0(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_UNKNOWNENTRY0 @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_UNKNOWNENTRY0 @ %s.", hex(offset))
         super(SHITEM_UNKNOWNENTRY0, self).__init__(buf, offset, parent)
 
         self.declare_field("word", "size", 0x0)
@@ -255,7 +258,7 @@ class SHITEM_UNKNOWNENTRY0(SHITEM):
 
 class SHITEM_UNKNOWNENTRY2(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_UNKNOWNENTRY2 @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_UNKNOWNENTRY2 @ %s.", hex(offset))
         super(SHITEM_UNKNOWNENTRY2, self).__init__(buf, offset, parent)
 
         self.declare_field("byte", "flags", 0x3)
@@ -278,7 +281,7 @@ class SHITEM_UNKNOWNENTRY2(SHITEM):
 
 class SHITEM_URIENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_URIENTRY @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_URIENTRY @ %s.", hex(offset))
         super(SHITEM_URIENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("dword", "flags", 0x3)
@@ -294,7 +297,7 @@ class SHITEM_URIENTRY(SHITEM):
 
 class SHITEM_CONTROLPANELENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_CONTROLPANELENTRY @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_CONTROLPANELENTRY @ %s.", hex(offset))
         super(SHITEM_CONTROLPANELENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("byte", "flags", 0x3)
@@ -313,7 +316,7 @@ class SHITEM_CONTROLPANELENTRY(SHITEM):
 
 class SHITEM_VOLUMEENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_VOLUMEENTRY @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_VOLUMEENTRY @ %s.", hex(offset))
         super(SHITEM_VOLUMEENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("string", "name", 0x3)
@@ -325,7 +328,7 @@ class SHITEM_VOLUMEENTRY(SHITEM):
 
 class SHITEM_NETWORKVOLUMEENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_NETWORKVOLUMEENTRY @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_NETWORKVOLUMEENTRY @ %s.", hex(offset))
         super(SHITEM_NETWORKVOLUMEENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("byte", "flags", 0x4)
@@ -348,7 +351,7 @@ class SHITEM_NETWORKVOLUMEENTRY(SHITEM):
 
 class SHITEM_NETWORKSHAREENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_NETWORKSHAREENTRY @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_NETWORKSHAREENTRY @ %s.", hex(offset))
         super(SHITEM_NETWORKSHAREENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("byte", "flags", 0x4)
@@ -369,7 +372,7 @@ class Fileentry(SHITEM):
     minor differences (eg. sizeof and location of size field).
     """
     def __init__(self, buf, offset, parent, filesize_offset):
-        debug("Fileentry @ %s." % (hex(offset)))
+        g_logger.debug("Fileentry @ %s.", hex(offset))
         super(Fileentry, self).__init__(buf, offset, parent)
 
         off = filesize_offset
@@ -410,7 +413,7 @@ class Fileentry(SHITEM):
         elif self.ext_version() >= 0x0003:
             self._off_long_name_size = False
             self._off_long_name = off
-            debug("(WSTRING) long_name @ %s" % (hex(self.absolute_offset(off))))
+            g_logger.debug("(WSTRING) long_name @ %s", hex(self.absolute_offset(off)))
         else:
             self._off_long_name_size = False
             self._off_long_name = False
@@ -447,7 +450,7 @@ class Fileentry(SHITEM):
 
 class SHITEM_FILEENTRY(Fileentry):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_FILEENTRY @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_FILEENTRY @ %s.", hex(offset))
         super(SHITEM_FILEENTRY, self).__init__(buf, offset, parent, 0x4)
 
         self.declare_field("byte", "flags", 0x3)
@@ -459,7 +462,7 @@ class SHITEM_FILEENTRY(Fileentry):
 
 class ITEMPOS_FILEENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
-        debug("ITEMPOS_FILEENTRY @ %s." % (hex(offset)))
+        g_logger.debug("ITEMPOS_FILEENTRY @ %s.", hex(offset))
         super(ITEMPOS_FILEENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("word", "size", 0x0)  # override
@@ -508,7 +511,7 @@ class ITEMPOS_FILEENTRY(SHITEM):
         elif self.ext_version() >= 0x0003:
             self._off_long_name_size = False
             self._off_long_name = off
-            debug("(WSTRING) long_name @ %s" % (hex(self.absolute_offset(off))))
+            g_logger.debug("(WSTRING) long_name @ %s", hex(self.absolute_offset(off)))
         else:
             self._off_long_name_size = False
             self._off_long_name = False
@@ -542,7 +545,7 @@ class ITEMPOS_FILEENTRY(SHITEM):
 
 class FILEENTRY_FRAGMENT(SHITEM):
     def __init__(self, buf, offset, parent, filesize_offset):
-        debug("FILEENTRY_FRAGMENT @ %s." % (hex(offset)))
+        g_logger.debug("FILEENTRY_FRAGMENT @ %s.", hex(offset))
         super(FILEENTRY_FRAGMENT, self).__init__(buf, offset, parent)
 
         off = filesize_offset
@@ -559,11 +562,11 @@ class FILEENTRY_FRAGMENT(SHITEM):
 
     def __unicode__(self):
         return u"ITEMPOS_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
-        
+
 
 class SHITEM_UNKNOWNENTRY3(Fileentry):
     def __init__(self, buf, offset, parent):
-        debug("SHITEM_UNKNOWNENTRY3 @ %s." % (hex(offset)))
+        g_logger.debug("SHITEM_UNKNOWNENTRY3 @ %s.", hex(offset))
         super(SHITEM_UNKNOWNENTRY3, self).__init__(buf, offset, parent, 0x4)
 
         self.declare_field("word", "size", 0x0)
@@ -584,7 +587,7 @@ class SHITEM_UNKNOWNENTRY3(Fileentry):
 
 class SHITEMLIST(Block):
     def __init__(self, buf, offset, parent):
-        debug("SHITEMLIST @ %s." % (hex(offset)))
+        g_logger.debug("SHITEMLIST @ %s.", hex(offset))
         super(SHITEMLIST, self).__init__(buf, offset, parent)
 
     def items(self):
@@ -595,7 +598,7 @@ class SHITEMLIST(Block):
             if size == 0:
                 return
 
-    # UNKNOWN1
+            # UNKNOWN1
 
             _type = self.unpack_byte(off + 2)
             if _type == SHITEMTYPE.FILE_ENTRY0 or \
@@ -625,6 +628,10 @@ class SHITEMLIST(Block):
                 item = SHITEM_URIENTRY(self._buf, off, self)
 
             elif _type == SHITEMTYPE.CONTROL_PANEL:
+                if len(self._buf) - off != 0x20:
+                    g_logger.warning("CONTROLPANELENTRY with size != 0x20: %s",
+                            len(self._buf) - off)
+                    return
                 item = SHITEM_CONTROLPANELENTRY(self._buf, off, self)
 
             elif _type == SHITEMTYPE.UNKNOWN0:
@@ -637,7 +644,7 @@ class SHITEMLIST(Block):
                 item = SHITEM_UNKNOWNENTRY3(self._buf, off, self)
 
             else:
-                debug("Unknown type: %s" % hex(_type))
+                g_logger.debug("Unknown type: %s", hex(_type))
                 item = SHITEM(self._buf, off, self)
 
             yield item
