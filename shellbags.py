@@ -19,21 +19,20 @@
 
 import re
 import sys
+import csv
+import logging
 import datetime
 import argparse
 import calendar
-import csv
+
 from Registry import Registry
 
 from BinaryParser import Block
-from BinaryParser import debug
-from BinaryParser import debug_increase_indent
-from BinaryParser import debug_decrease_indent
-from BinaryParser import debug_enable
-from BinaryParser import debug_disable
 from BinaryParser import OverrunBufferException
 from ShellItems import SHITEMLIST
 from ShellItems import ITEMPOS_FILEENTRY
+
+g_logger = logging.getLogger("shellbags")
 
 
 def date_safe(d):
@@ -105,8 +104,6 @@ def get_shellbags(shell_key):
             file system path so far constructed.
         Throws:
         """
-        debug("Considering BagMRU key %s" % (key.path()))
-        debug_increase_indent()
         try:
             # First, consider the current key, and extract shellbag items
             slot = key.value("NodeSlot").value()
@@ -114,7 +111,6 @@ def get_shellbags(shell_key):
                 for value in [value for value in bag.values() if
                               "ItemPos" in value.name()]:
                     buf = value.value()
-                    debug("Slot %s ITEMPOS @ %s" % (str(slot), value.name()))
 
                     block = Block(buf, 0x0, False)
                     offset = 0x10
@@ -128,7 +124,6 @@ def get_shellbags(shell_key):
                             pass
                         else:
                             item = ITEMPOS_FILEENTRY(buf, offset, False)
-                            debug("Name: " + item.name())
                             shellbags.append({
                                 "path": path_prefix + "\\" + item.name(),
                                 "mtime": item.m_date(),
@@ -140,26 +135,23 @@ def get_shellbags(shell_key):
                             })
                         offset += size
         except Registry.RegistryValueNotFoundException:
-            debug("Registry.RegistryValueNotFoundException")
+            g_logger.warning("Registry.RegistryValueNotFoundException")
             pass
         except Registry.RegistryKeyNotFoundException:
-            debug("Registry.RegistryKeyNotFoundException")
+            g_logger.warning("Registry.RegistryKeyNotFoundException")
             pass
         except:
-            debug("Unexpected error %s" % sys.exc_info()[0])
+            g_logger.warning("Unexpected error %s" % sys.exc_info()[0])
 
         # Next, recurse into each BagMRU key
         for value in [value for value in key.values()
                       if re.match("\d+", value.name())]:
-            debug("BagMRU value %s (%s)" % (value.name(),
-                                            key.path()))
             path = ""
             try:  # TODO(wb): removeme
                 l = SHITEMLIST(value.value(), 0, False)
                 for item in l.items():
                     # assume there is only one entry in the value, or take the last
                     # as the path component
-                    debug("Name: " + item.name())
                     path = path_prefix + "\\" + item.name()
                     shellbags.append({
                         "path":  path,
@@ -178,7 +170,6 @@ def get_shellbags(shell_key):
             shellbag_rec(key.subkey(value.name()),
                          bag_prefix + "\\" + value.name(),
                          path)
-        debug_decrease_indent()
 
     shellbag_rec(bagmru_key, "", "")
     return shellbags
@@ -205,10 +196,8 @@ def get_all_shellbags(reg):
 
     for path in paths:
         try:
-            debug("Processing: %s" % (path))
             shell_key = reg.open(path)
             new = get_shellbags(shell_key)
-            debug("Found %s new shellbags" % (len(new)))
             shellbags.extend(new)
         except Registry.RegistryKeyNotFoundException:
             pass
@@ -278,11 +267,6 @@ if __name__ == "__main__":
                         dest="fmt", default="bodyfile",
                         help="Output format: csv or bodyfile; default is bodyfile")
     args = parser.parse_args()
-
-    if args.vverbose:
-        debug_enable()
-    else:
-        debug_disable()
 
     for f in args.file:
         registry = Registry.Registry(f)
