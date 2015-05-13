@@ -285,7 +285,7 @@ class SHITEM_URIENTRY(SHITEM):
         super(SHITEM_URIENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("dword", "flags", 0x3)
-        self.declare_field("wstring", "uri", 0x7)
+        self.declare_field("wstring", "uri", 0x8)
 
     def __unicode__(self):
         return u"SHITEM_URIENTRY @ %s: %s." % \
