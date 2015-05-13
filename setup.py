@@ -11,6 +11,7 @@ setup(name='shellbags',
     py_modules=[
         'BinaryParser',
         'ShellItems',
+        'known_guids',
     ],
     scripts=[
         'shellbags.py',
