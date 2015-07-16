@@ -56,6 +56,7 @@ class ParseException(Exception):
         - `value`: A string description.
         """
         super(ParseException, self).__init__(value)
+        self._value = value
 
     def __str__(self):
         return str(unicode(self))
@@ -72,12 +73,14 @@ class OverrunBufferException(ParseException):
     def __init__(self, readOffs, bufLen):
         tvalue = "read: %s, buffer length: %s" % (hex(readOffs), hex(bufLen))
         super(ParseException, self).__init__(tvalue)
+        self._readOffs = readOffs
+        self._bufLen = bufLen
 
     def __str__(self):
         return str(unicode(self))
 
     def __unicode__(self):
-        return u"Tried to parse beyond the end of the file (%s)" % (self._value)
+        return u"Tried to parse beyond the end of the file (%s)" % (self._readOffs)
 
 
 class Block(object):
