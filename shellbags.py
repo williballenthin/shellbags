@@ -201,6 +201,8 @@ def get_all_shellbags(reg):
             shellbags.extend(new)
         except Registry.RegistryKeyNotFoundException:
             pass
+        except Exception:
+            g_logger.exception("Unhandled exception while parsing %s" % path)
 
     return shellbags
 
