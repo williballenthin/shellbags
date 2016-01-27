@@ -27,10 +27,8 @@ import calendar
 
 from Registry import Registry
 
-from BinaryParser import Block
 from BinaryParser import OverrunBufferException
 from ShellItems import SHITEMLIST
-from ShellItems import ITEMPOS_FILEENTRY
 
 g_logger = logging.getLogger("shellbags")
 
@@ -112,7 +110,7 @@ def get_shellbags(shell_key):
                               "ItemPos" in value.name()]:
                     buf = value.value()
 
-                    block = Block(buf, 0x0, False)
+                    block = SHITEMLIST(buf, 0x0, False)
                     offset = 0x10
 
                     while True:
@@ -123,7 +121,7 @@ def get_shellbags(shell_key):
                         elif size < 0x15:
                             pass
                         else:
-                            item = ITEMPOS_FILEENTRY(buf, offset, False)
+                            item = block.get_item(offset)
                             shellbags.append({
                                 "path": path_prefix + "\\" + item.name(),
                                 "mtime": item.m_date(),

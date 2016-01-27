@@ -2,6 +2,8 @@ import sys
 import struct
 import logging
 import datetime
+import binascii
+import six
 
 g_logger = logging.getLogger("BinaryParser")
 
@@ -56,7 +58,6 @@ class ParseException(Exception):
         - `value`: A string description.
         """
         super(ParseException, self).__init__(value)
-        self._value = value
 
     def __str__(self):
         return str(unicode(self))
@@ -73,14 +74,12 @@ class OverrunBufferException(ParseException):
     def __init__(self, readOffs, bufLen):
         tvalue = "read: %s, buffer length: %s" % (hex(readOffs), hex(bufLen))
         super(ParseException, self).__init__(tvalue)
-        self._readOffs = readOffs
-        self._bufLen = bufLen
 
     def __str__(self):
         return str(unicode(self))
 
     def __unicode__(self):
-        return u"Tried to parse beyond the end of the file (%s)" % (self._readOffs)
+        return u"Tried to parse beyond the end of the file (%s)" % (self._value)
 
 
 class Block(object):
@@ -121,10 +120,16 @@ class Block(object):
                 f = getattr(self, "unpack_" + field[0])
                 return f(*(field[2:]))
             setattr(self, field[1], handler)
+            debug_payload = handler()
+            if isinstance(debug_payload, six.text_type):
+                debug_payload = debug_payload.encode('utf8')
+            else:
+                debug_payload = str(debug_payload)
+            debug_payload = binascii.hexlify(debug_payload)
             g_logger.debug("(%s) %s\t@ %s\t: %s" % (field[0].upper(),
                                          field[1],
                                          hex(self.absolute_offset(field[2])),
-                                         str(handler())))
+                                         debug_payload))
             setattr(self, "_off_" + field[1], field[2])
 
     def declare_field(self, type, name, offset, length=False):
@@ -258,39 +263,22 @@ class Block(object):
         - `UnicodeDecodeError`
         - `IndexError`
         """
-        if not ilength:
-            o = self._offset + offset
-            end = self._buf.find("\x00\x00", o)
-            if end - 2 <= o:
-                return ""
 
-            # BUG:
-            # This doesn't work for something like this:
-            # \xFF \xFF A \x00 \x00 \x00
-            # +-------+ +----+ +-------+
-            if self._buf[end - 2] == "\x00":
-                # then the last UTF-16 character was in the ASCII range
-                # and the \x00\x00 matched on the second half of the char
-                # and continued into the final null char
-                #
-                # eg.     \x00 A \x00 B \x00 \x00 \x00
-                #        ----+ +----+ +----+ +-------+
-                end += 1
-            else:
-                # the \x00\x00 matched on the final null
-                #
-                # eg.     A \x00 \xFF \xFF \x00 \x00
-                #         +----+ +-------+ +-------+
-                pass
-            length = end - o
-        else:
-            o = self._offset + offset
-            end = self._buf.find("\x00\x00\x00", o)
-            length = min(ilength, end - o)
+        raw_bytes = self._buf[self._offset + offset:]
+
+        # Trim to specified length
+        if ilength:
+            raw_bytes = raw_bytes[:ilength]
+
+        # Ensure raw_bytes is even-length
+        if len(raw_bytes) % 2:
+            raw_bytes = raw_bytes[:-1]
         try:
-            return self._buf[self._offset + offset:self._offset + offset + length].decode("utf16").partition("\x00")[0]
-        except UnicodeDecodeError:
-            return self._buf[self._offset + offset:self._offset + offset + length + 1].decode("utf16").partition("\x00")[0]
+            index = [raw_bytes[i:i + 2] for i in range(0, len(raw_bytes), 2)].index('\x00\x00')
+            raw_bytes = raw_bytes[:index * 2]
+        except ValueError:
+            pass
+        return raw_bytes.decode("utf-16-le")
 
     def unpack_dosdate(self, offset):
         """
