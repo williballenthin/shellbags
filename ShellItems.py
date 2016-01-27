@@ -8,7 +8,6 @@ from known_guids import known_guids
 
 
 g_logger = logging.getLogger("ShellItems")
-unignored_logger = logging.getLogger("asdf_ShellItems")
 
 
 class SHITEMTYPE:
@@ -242,7 +241,7 @@ class ExtensionBlock_BEEF0004(Block):
             off += 8 # unknown
 
         if self.ext_version() >= 0x0003:
-            self.declare_field("word", "localized_name_size", off); off += 2
+            self.declare_field("word", "long_name_size", off); off += 2
         if self.ext_version() >= 0x0009:
             off += 4 # Unknown
         if self.ext_version() >= 0x0008:
@@ -251,12 +250,12 @@ class ExtensionBlock_BEEF0004(Block):
         if self.ext_version() >= 0x0003:
             self.declare_field("wstring", "long_name", off)
             off += 2 * len(self.long_name()) + 2
-        if 0x0003 <= self.ext_version() < 0x0007 and self.localized_name_size() > 0:
+        if 0x0003 <= self.ext_version() < 0x0007 and self.long_name_size() > 0:
             self.declare_field("string", "localized_name", off)
-            off += self.localized_name_size() + 1
-        elif self.ext_version() >= 0x0007 and self.localized_name_size() > 0:
+            off += self.long_name_size() + 1
+        elif self.ext_version() >= 0x0007 and self.long_name_size() > 0:
             self.declare_field("wstring", "localized_name", off)
-            off += 2 * self.localized_name_size() + 2
+            off += 2 * self.long_name_size() + 2
 
 
 class SHITEM_WITH_EXTENSION(SHITEM):
@@ -264,17 +263,10 @@ class SHITEM_WITH_EXTENSION(SHITEM):
         super(SHITEM_WITH_EXTENSION, self).__init__(buf, offset, parent)
         self.extension_block = None
 
-    def cr_date(self):
-        return self.extension_block.cr_date()
-
-    def a_date(self):
-        return self.extension_block.a_date()
-
-    def long_name(self):
-        return self.extension_block.long_name()
-
-    def localized_name(self):
-        return self.extension_block.localized_name()
+    def __getattr__(self, item):
+        if hasattr(self.extension_block, item):
+            return getattr(self.extension_block, item)
+        return self.__getattribute__(item)
 
 
 class Fileentry(SHITEM_WITH_EXTENSION):
