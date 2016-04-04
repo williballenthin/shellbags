@@ -283,6 +283,9 @@ class Fileentry(SHITEM_WITH_EXTENSION):
         self.declare_field("dosdate", "m_date", off); off += 4
         self.declare_field("word", "fileattrs", off); off += 2
         self.declare_field("word", "ext_offset", self.size() - 2)
+        if self.ext_offset() > self.size():
+            raise OverrunBufferException(self.ext_offset(), self.size())
+
         if self.type() & 0x4:
             self.declare_field("wstring", "short_name", off, length=self.ext_offset() - off)
         else:
