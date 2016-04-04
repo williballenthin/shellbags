@@ -53,6 +53,7 @@ def test(filename):
         print "item:", index
         print "type:", item.__class__.__name__
         print "name:", item.name()
+        print "mtime:", item.m_date()
 
 
 def main():

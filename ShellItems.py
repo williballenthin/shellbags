@@ -18,19 +18,13 @@ class SHITEMTYPE:
     UNKNOWN0 = 0x00
     UNKNOWN1 = 0x01
     UNKNOWN2 = 0x2E
-    FILE_ENTRY0 = 0x31
-    FILE_ENTRY1 = 0x32
-    FILE_ENTRY2 = 0xB1
+    FILE_ENTRY = 0x30
     FOLDER_ENTRY = 0x1F
-    VOLUME_NAME = 0x2F
-    NETWORK_VOLUME_NAME0 = 0x41
-    NETWORK_VOLUME_NAME1 = 0x42
-    NETWORK_VOLUME_NAME2 = 0x46
-    NETWORK_VOLUME_NAME3 = 0x47
-    NETWORK_SHARE = 0xC3
+    VOLUME_NAME = 0x20
+    NETWORK_LOCATION = 0x40
     URI = 0x61
     CONTROL_PANEL = 0x71
-    UNKNOWN3 = 0x74
+    DELEGATE_ITEM = 0x74
 
 
 class SHITEM(Block):
@@ -97,9 +91,8 @@ class SHITEM_FOLDERENTRY(SHITEM):
 
     def name(self):
         if self.guid() in known_guids:
-            return known_guids[self.guid()]
-        else:
-            return "{%s: %s}" % (self.folder_id(), self.guid())
+            return "{%s}" % known_guids[self.guid()]
+        return "{%s: %s}" % (self.folder_id(), self.guid())
 
 
 class SHITEM_UNKNOWNENTRY0(SHITEM):
@@ -119,10 +112,7 @@ class SHITEM_UNKNOWNENTRY0(SHITEM):
 
     def name(self):
         if self.size() == 0x20:
-            if self.guid() in known_guids:
-                return known_guids[self.guid()]
-            else:
-                return "{%s}" % (self.guid())
+            return "{%s}" % known_guids.get(self.guid(), self.guid())
         else:
             return "??"
 
@@ -144,10 +134,7 @@ class SHITEM_UNKNOWNENTRY2(SHITEM):
           (hex(self.offset()), self.name())
 
     def name(self):
-        if self.guid() in known_guids:
-            return known_guids[self.guid()]
-        else:
-            return "{%s}" % (self.guid())
+        return "{%s}" % known_guids.get(self.guid(), self.guid())
 
 
 class SHITEM_URIENTRY(SHITEM):
@@ -172,17 +159,14 @@ class SHITEM_CONTROLPANELENTRY(SHITEM):
         super(SHITEM_CONTROLPANELENTRY, self).__init__(buf, offset, parent)
 
         self.declare_field("byte", "flags", 0x3)
-        self.declare_field("guid", "guid", 0xD)
+        self.declare_field("guid", "guid", 0xE)
 
     def __unicode__(self):
         return u"SHITEM_CONTROLPANELENTRY @ %s: %s." % \
           (hex(self.offset()), self.name())
 
     def name(self):
-        if self.guid() in known_guids:
-            return known_guids[self.guid()]
-        else:
-            return "{CONTROL PANEL %s}" % (self.guid())
+        return "{CONTROL PANEL: %s}" % known_guids.get(self.guid(), self.guid())
 
 
 class SHITEM_VOLUMEENTRY(SHITEM):
@@ -190,54 +174,102 @@ class SHITEM_VOLUMEENTRY(SHITEM):
         g_logger.debug("SHITEM_VOLUMEENTRY @ %s.", hex(offset))
         super(SHITEM_VOLUMEENTRY, self).__init__(buf, offset, parent)
 
-        self.declare_field("string", "name", 0x3)
+        if self.type() & 0x1:
+            self.declare_field("string", "name", 0x3)
 
     def __unicode__(self):
         return u"SHITEM_VOLUMEENTRY @ %s: %s." % \
           (hex(self.offset()), self.name())
 
 
-class SHITEM_NETWORKVOLUMEENTRY(SHITEM):
+class SHITEM_NETWORKLOCATIONENTRY(SHITEM):
     def __init__(self, buf, offset, parent):
         g_logger.debug("SHITEM_NETWORKVOLUMEENTRY @ %s.", hex(offset))
-        super(SHITEM_NETWORKVOLUMEENTRY, self).__init__(buf, offset, parent)
+        super(SHITEM_NETWORKLOCATIONENTRY, self).__init__(buf, offset, parent)
 
+        if self.type() & 0xF == 0xD:
+            self.declare_field("guid", "guid", 0x4)
+            return
         self.declare_field("byte", "flags", 0x4)
-        self._off_name = 0x5
+        off = 0x5
+        self.declare_field("string", "location", 0x5)
+        off += len(self.name()) + 1
+        if self.flags() & 0x80:
+            self.declare_field("string", "description", off)
+            off += len(self.description()) + 1
+        if self.flags() & 0x40:
+            self.declare_field("string", "comments", off)
+            off += len(self.comments()) + 1
 
     def __unicode__(self):
         return u"SHITEM_NETWORKVOLUMEENTRY @ %s: %s." % \
           (hex(self.offset()), self.name())
 
     def name(self):
-        if self.flags() & 0x2:
-            return self.unpack_string(self._off_name)
-        return ""
-
-    def description(self):
-        if self.flags() & 0x2:
-            return self.unpack_string(self._off_name + len(self.name()) + 1)
-        return ""
+        if hasattr(self, 'guid'):
+            return "{%s}" % known_guids.get(self.guid(), self.guid())
+        return self.location()
 
 
-class SHITEM_NETWORKSHAREENTRY(SHITEM):
+class ExtensionBlock_BEEF0004(Block):
+    """
+    Extension block found in Fileentry, delegate shell item
+    """
     def __init__(self, buf, offset, parent):
-        g_logger.debug("SHITEM_NETWORKSHAREENTRY @ %s.", hex(offset))
-        super(SHITEM_NETWORKSHAREENTRY, self).__init__(buf, offset, parent)
+        super(ExtensionBlock_BEEF0004, self).__init__(buf, offset, parent)
+        # Initialize name functors:
+        self.localized_name = lambda: u''
+        self.long_name = lambda: u''
+        off = 0
+        self.declare_field("word", "ext_size", off); off += 2
+        self.declare_field("word", "ext_version", off); off += 2
 
-        self.declare_field("byte", "flags", 0x4)
-        self.declare_field("string", "path", 0x5)
-        self.declare_field("string", "description", 0x5 + len(self.path()) + 1)
+        if self.ext_version() >= 0x03:
+            off += 4 # 0xbeef0004
 
-    def __unicode__(self):
-        return u"SHITEM_NETWORKSHAREENTRY @ %s: %s." % \
-          (hex(self.offset()), self.name())
+            self.declare_field("dosdate", "cr_date", off); off += 4
+            self.declare_field("dosdate", "a_date", off); off += 4
 
-    def name(self):
-        return self.path()
+            off += 2 # unknown
+        else:
+            self.cr_date = lambda: datetime.datetime.min
+            self.a_date = lambda: datetime.datetime.min
+
+        if self.ext_version() >= 0x0007:
+            off += 2
+            off += 8 # fileref
+            off += 8 # unknown
+
+        if self.ext_version() >= 0x0003:
+            self.declare_field("word", "long_name_size", off); off += 2
+        if self.ext_version() >= 0x0009:
+            off += 4 # Unknown
+        if self.ext_version() >= 0x0008:
+            off += 4 # Unknown
+
+        if self.ext_version() >= 0x0003:
+            self.declare_field("wstring", "long_name", off)
+            off += 2 * len(self.long_name()) + 2
+        if 0x0003 <= self.ext_version() < 0x0007 and self.long_name_size() > 0:
+            self.declare_field("string", "localized_name", off)
+            off += self.long_name_size() + 1
+        elif self.ext_version() >= 0x0007 and self.long_name_size() > 0:
+            self.declare_field("wstring", "localized_name", off)
+            off += 2 * self.long_name_size() + 2
 
 
-class Fileentry(SHITEM):
+class SHITEM_WITH_EXTENSION(SHITEM):
+    def __init__(self, buf, offset, parent):
+        super(SHITEM_WITH_EXTENSION, self).__init__(buf, offset, parent)
+        self.extension_block = None
+
+    def __getattr__(self, item):
+        if hasattr(self.extension_block, item):
+            return getattr(self.extension_block, item)
+        return self.__getattribute__(item)
+
+
+class Fileentry(SHITEM_WITH_EXTENSION):
     """
     The Fileentry structure is used both in the BagMRU and Bags keys with
     minor differences (eg. sizeof and location of size field).
@@ -250,73 +282,23 @@ class Fileentry(SHITEM):
         self.declare_field("dword", "filesize", off); off += 4
         self.declare_field("dosdate", "m_date", off); off += 4
         self.declare_field("word", "fileattrs", off); off += 2
-        self.declare_field("string", "short_name", off)
+        self.declare_field("word", "ext_offset", self.size() - 2)
+        if self.ext_offset() > self.size():
+            raise OverrunBufferException(self.ext_offset(), self.size())
 
-        off += len(self.short_name()) + 1
-        off = align(off, 2)
-
-        self.declare_field("word", "ext_size", off); off += 2
-        self.declare_field("word", "ext_version", off); off += 2
-
-        if self.ext_version() >= 0x03:
-            off += 4 # unknown
-
-            self.declare_field("dosdate", "cr_date", off); off += 4
-            self.declare_field("dosdate", "a_date", off); off += 4
-
-            off += 4 # unknown
+        if self.type() & 0x4:
+            self.declare_field("wstring", "short_name", off, length=self.ext_offset() - off)
         else:
-            self.cr_date = lambda: datetime.datetime.min
-            self.a_date = lambda: datetime.datetime.min
-
-        if self.ext_version() >= 0x0007:
-            off += 8 # fileref
-            off += 8 # unknown
-
-            self._off_long_name_size = off
-            off += 2
-
-            if self.ext_version() >= 0x0008:
-                off += 4 # unknown
-
-            self._off_long_name = off
-            off += self.long_name_size()
-        elif self.ext_version() >= 0x0003:
-            self._off_long_name_size = False
-            self._off_long_name = off
-            g_logger.debug("(WSTRING) long_name @ %s", hex(self.absolute_offset(off)))
-        else:
-            self._off_long_name_size = False
-            self._off_long_name = False
+            self.declare_field("string", "short_name", off, length=self.ext_offset() - off)
+        self.extension_block = ExtensionBlock_BEEF0004(buf, self.ext_offset() + offset, self)
 
     def __unicode__(self):
         return u"Fileentry @ %s: %s." % (hex(self.offset()), self.name())
 
-    def long_name_size(self):
-        if self._off_long_name_size:
-            return self.unpack_word(self._off_long_name_size)
-        elif self._off_long_name:
-            return len(self.long_name()) + 2
-        else:
-            return 0
-
-    def long_name(self):
-        if self._off_long_name and self._off_long_name_size:
-            if self.long_name_size() == 0:
-                return ""
-            else:
-                return self.unpack_wstring(self._off_long_name, self.long_name_size())
-        elif self._off_long_name:
-            return self.unpack_wstring(self._off_long_name)
-        else:
-            return ""
-
     def name(self):
-        n = self.long_name()
-        if len(n) > 0:
-            return n
-        else:
-            return self.short_name()
+        if self.long_name():
+            return self.long_name()
+        return self.short_name()
 
 
 class SHITEM_FILEENTRY(Fileentry):
@@ -329,89 +311,6 @@ class SHITEM_FILEENTRY(Fileentry):
     def __unicode__(self):
         return u"SHITEM_FILEENTRY @ %s: %s." % (hex(self.offset()),
                                                 self.name())
-
-
-class ITEMPOS_FILEENTRY(SHITEM):
-    def __init__(self, buf, offset, parent):
-        g_logger.debug("ITEMPOS_FILEENTRY @ %s.", hex(offset))
-        super(ITEMPOS_FILEENTRY, self).__init__(buf, offset, parent)
-
-        self.declare_field("word", "size", 0x0)  # override
-        self.declare_field("word", "flags", 0x2)
-
-        if self.flags() & 0xFF == 0xC3:
-            # network share type, printers, etc
-            self.declare_field("string", "long_name", 0x5)
-            return
-
-        off = 4
-        self.declare_field("dword", "filesize", off); off += 4
-        self.declare_field("dosdate", "m_date", off); off += 4
-        self.declare_field("word", "fileattrs", off); off += 2
-        self.declare_field("string", "short_name", off)
-
-        off += len(self.short_name()) + 1
-        off = align(off, 2)
-
-        self.declare_field("word", "ext_size", off); off += 2
-        self.declare_field("word", "ext_version", off); off += 2
-
-        if self.ext_version() >= 0x03:
-            off += 4  # unknown
-
-            self.declare_field("dosdate", "cr_date", off); off += 4
-            self.declare_field("dosdate", "a_date", off); off += 4
-
-            off += 4  # unknown
-        else:
-            self.cr_date = lambda: datetime.datetime.min
-            self.a_date = lambda: datetime.datetime.min
-
-        if self.ext_version() >= 0x0007:
-            off += 8  # fileref
-            off += 8  # unknown
-
-            self._off_long_name_size = off
-            off += 2
-
-            if self.ext_version() >= 0x0008:
-                off += 4  # unknown
-
-            self._off_long_name = off
-            off += self.long_name_size()
-        elif self.ext_version() >= 0x0003:
-            self._off_long_name_size = False
-            self._off_long_name = off
-            g_logger.debug("(WSTRING) long_name @ %s", hex(self.absolute_offset(off)))
-        else:
-            self._off_long_name_size = False
-            self._off_long_name = False
-
-    def long_name_size(self):
-        if self._off_long_name_size:
-            return self._off_long_name_size
-        elif self._off_long_name:
-            return len(self.long_name()) + 2
-        else:
-            return 0
-
-    def long_name(self):
-        if self._off_long_name and self._off_long_name_size:
-            return self.unpack_wstring(self._off_long_name, self.long_name_size())
-        elif self._off_long_name:
-            return self.unpack_wstring(self._off_long_name)
-        else:
-            return ""
-
-    def name(self):
-        n = self.long_name()
-        if len(n) > 0:
-            return n
-        else:
-            return self.short_name()
-
-    def __unicode__(self):
-        return u"ITEMPOS_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
 
 
 class FILEENTRY_FRAGMENT(SHITEM):
@@ -435,25 +334,37 @@ class FILEENTRY_FRAGMENT(SHITEM):
         return u"ITEMPOS_FILEENTRY @ %s: %s." % (hex(self.offset()), self.name())
 
 
-class SHITEM_UNKNOWNENTRY3(Fileentry):
+class SHITEM_DELEGATE(SHITEM_WITH_EXTENSION):
     def __init__(self, buf, offset, parent):
         g_logger.debug("SHITEM_UNKNOWNENTRY3 @ %s.", hex(offset))
-        super(SHITEM_UNKNOWNENTRY3, self).__init__(buf, offset, parent, 0x4)
+        super(SHITEM_DELEGATE, self).__init__(buf, offset, parent)
+        # Unknown - Empty ( 1 byte)
+        # Unknown - size? - 2 bytes
+        # CFSF - 4 bytes
+        # sub shell item data size - 2 bytes
+        self.declare_field("dword", "signature", 0x6)  # CFSF 0x46534643
 
-        self.declare_field("word", "size", 0x0)
-        # most of this is unknown
-        offs = 0x18
-        self.declare_field("string", "short_name", offs)
-        offs += len(self.short_name()) + 1
-        offs = align(offs, 2)
-        offs += 0x4C
-        self.declare_field("wstring", "long_name", offs)
+        off = 0xA
+        self.sub_item = FILEENTRY_FRAGMENT(buf, offset + off, self, 0x4)
+        off += self.sub_item.size()
+
+        off += 2  # Empty extension block?
+
+        # 5e591a74-df96-48d3-8d67-1733bcee28ba
+        self.declare_field("guid", "delegate_item_identifier", off); off += 0x10
+        self.declare_field("guid", "item_class_identifier", off); off += 0x10
+        self.extension_block = ExtensionBlock_BEEF0004(buf, offset + off, self)
 
     def __unicode__(self):
-        return u"SHITEM_UNKNOWNENTRY3 @ %s: %s." % (hex(self.offset()), self.name())
+        return u"SHITEM_DELEGATE @ %s: %s." % (hex(self.offset()), self.name())
 
     def name(self):
-        return self.long_name()
+        if self.long_name():
+            return self.long_name()
+        return self.sub_item.short_name()
+
+    def m_date(self):
+        return self.sub_item.m_date()
 
 
 class SHITEMLIST(Block):
@@ -461,65 +372,63 @@ class SHITEMLIST(Block):
         g_logger.debug("SHITEMLIST @ %s.", hex(offset))
         super(SHITEMLIST, self).__init__(buf, offset, parent)
 
+    def get_item(self, off):
+        # UNKNOWN1
+
+        _type = self.unpack_byte(off + 2)
+        if _type & 0x70 == SHITEMTYPE.FILE_ENTRY:
+            try:
+                item = SHITEM_FILEENTRY(self._buf, off, self)
+            except OverrunBufferException:
+                item = FILEENTRY_FRAGMENT(self._buf, off, self, 0x4)
+
+        elif _type == SHITEMTYPE.FOLDER_ENTRY:
+            item = SHITEM_FOLDERENTRY(self._buf, off, self)
+
+        elif _type == SHITEMTYPE.UNKNOWN2:
+            item = SHITEM_UNKNOWNENTRY2(self._buf, off, self)
+
+        elif _type & 0x70 == SHITEMTYPE.VOLUME_NAME:
+            item = SHITEM_VOLUMEENTRY(self._buf, off, self)
+
+        elif _type & 0x70 == SHITEMTYPE.NETWORK_LOCATION:
+            item = SHITEM_NETWORKLOCATIONENTRY(self._buf, off, self)
+
+        elif _type == SHITEMTYPE.URI:
+            item = SHITEM_URIENTRY(self._buf, off, self)
+
+        elif _type == SHITEMTYPE.CONTROL_PANEL:
+            item = SHITEM_CONTROLPANELENTRY(self._buf, off, self)
+
+        elif _type == SHITEMTYPE.UNKNOWN0:
+            item = SHITEM_UNKNOWNENTRY0(self._buf, off, self)
+
+        elif _type == SHITEMTYPE.DELEGATE_ITEM:
+            item = SHITEM_DELEGATE(self._buf, off, self)
+
+        else:
+            g_logger.debug("Unknown type: %s", hex(_type))
+            item = SHITEM(self._buf, off, self)
+        return item
+
     def items(self):
         off = self.offset()
 
         while True:
             size = self.unpack_word(off)
+
             if size == 0:
                 return
 
-            # UNKNOWN1
+            item = self.get_item(off)
 
-            _type = self.unpack_byte(off + 2)
-            if _type == SHITEMTYPE.FILE_ENTRY0 or \
-               _type == SHITEMTYPE.FILE_ENTRY1 or \
-               _type == SHITEMTYPE.FILE_ENTRY2:
-                try:
-                    item = SHITEM_FILEENTRY(self._buf, off, self)
-                except OverrunBufferException:
-                    item = FILEENTRY_FRAGMENT(self._buf, off, self, 0x4)
+            size = item.size()
 
-            elif _type == SHITEMTYPE.FOLDER_ENTRY:
-                item = SHITEM_FOLDERENTRY(self._buf, off, self)
-
-            elif _type == SHITEMTYPE.VOLUME_NAME:
-                item = SHITEM_VOLUMEENTRY(self._buf, off, self)
-
-            elif _type == SHITEMTYPE.NETWORK_VOLUME_NAME0 or \
-                 _type == SHITEMTYPE.NETWORK_VOLUME_NAME1 or \
-                 _type == SHITEMTYPE.NETWORK_VOLUME_NAME2 or \
-                 _type == SHITEMTYPE.NETWORK_VOLUME_NAME3:
-                item = SHITEM_NETWORKVOLUMEENTRY(self._buf, off, self)
-
-            elif _type == SHITEMTYPE.NETWORK_SHARE:
-                item = SHITEM_NETWORKSHAREENTRY(self._buf, off, self)
-
-            elif _type == SHITEMTYPE.URI:
-                item = SHITEM_URIENTRY(self._buf, off, self)
-
-            elif _type == SHITEMTYPE.CONTROL_PANEL:
-                if len(self._buf) - off != 0x20:
-                    g_logger.warning("CONTROLPANELENTRY with size != 0x20: %s",
-                            len(self._buf) - off)
-                    return
-                item = SHITEM_CONTROLPANELENTRY(self._buf, off, self)
-
-            elif _type == SHITEMTYPE.UNKNOWN0:
-                item = SHITEM_UNKNOWNENTRY0(self._buf, off, self)
-
-            elif _type == SHITEMTYPE.UNKNOWN2:
-                item = SHITEM_UNKNOWNENTRY2(self._buf, off, self)
-
-            elif _type == SHITEMTYPE.UNKNOWN3:
-                item = SHITEM_UNKNOWNENTRY3(self._buf, off, self)
-
+            if size:
+                yield item
+                off += size
             else:
-                g_logger.debug("Unknown type: %s", hex(_type))
-                item = SHITEM(self._buf, off, self)
-
-            yield item
-            off += item.size()
+                break
 
     def __unicode__(self):
         return u"SHITEMLIST @ %s." % (hex(self.offset()))

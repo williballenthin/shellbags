@@ -62,6 +62,7 @@ def test(filename):
         print "off long name:", item._off_long_name
         print "off long name size:", item._off_long_name_size
         print "long name size:", hex(item.long_name_size())
+        print "mtime:", item.m_date()
 
 
 def main():
