@@ -257,7 +257,7 @@ def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
 
 ################ MAIN  #############
 
-def main(argv=None)
+def main(argv=None):
     if argv is None:
         argv = sys.argv
         
