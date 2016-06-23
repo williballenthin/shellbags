@@ -257,7 +257,10 @@ def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
 
 ################ MAIN  #############
 
-if __name__ == "__main__":
+def main(argv=None)
+    if argv is None:
+        argv = sys.argv
+        
     parser = argparse.ArgumentParser(description="Parse Shellbag entries from a Windows Registry.")
     parser.add_argument("-v", action="store_true", dest="vverbose",
                         help="Print debugging information while parsing")
@@ -266,7 +269,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", choices=["csv", "bodyfile"],
                         dest="fmt", default="bodyfile",
                         help="Output format: csv or bodyfile; default is bodyfile")
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:])
 
     for f in args.file:
         registry = Registry.Registry(f)
@@ -284,3 +287,6 @@ if __name__ == "__main__":
                                         fail_note="Failed to parse entry name from: " + shellbag["source"])
         else:
             print "Error: Unsupported output format"
+            
+if __name__ == "__main__":
+    main(argv=sys.argv)
