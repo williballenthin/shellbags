@@ -15,7 +15,7 @@ The initial shellbags.py tag v0.5.
 
 Dependencies
 ------------
-shellbags.py requires Python2.7, argparse, and python-registry.
+shellbags.py requires Python2.7, argparse, six and python-registry.
 
 Usage
 -----
