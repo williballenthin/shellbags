@@ -1,37 +1,49 @@
-
-shellbags.py
-===============
+# shellbags.py
 
 ## Python 3 Compatibility Fork
 
-This is a modified version of Willi Ballenthin's shellbags.py, updated for Python 3 compatibility.
+This is a modified version of Willi Ballenthin's `shellbags.py`, updated for Python 3 compatibility.
 
-Original repository: https://github.com/williballenthin/shellbags  
-Original author: Willi Ballenthin  
-License: Apache License 2.0
+- **Original repository**: https://github.com/williballenthin/shellbags  
+- **Original author**: Willi Ballenthin  
+- **License**: Apache License 2.0
 
-Introduction
-------------
-shellbags.py is a cross-platform, open-source shellbag parser.
-The webpage
-http://www.williballenthin.com/forensics/shellbags/index.html
+---
+
+## Introduction
+
+`shellbags.py` is a cross-platform, open-source shellbag parser.
+
+The webpage  
+http://www.williballenthin.com/forensics/shellbags/index.html  
 describes the algorithm in detail.
-Note that shellbags.py was originally developed as a sample
-for python-registry, so this repository is a fork that contains
-the python-registry history through version v0.2.4.1.
-The initial shellbags.py tag v0.5.
 
-Dependencies
-------------
-shellbags.py requires Python2.7, argparse, six and python-registry.
+Note that `shellbags.py` was originally developed as a sample for `python-registry`, so this repository is a fork that contains the `python-registry` history through version v0.2.4.1.
 
-Usage
------
-shellbags.py accepts the path to a raw Windows Registry hive.
+The initial `shellbags.py` tag is **v0.5**.
+
+---
+
+## Dependencies
+
+`shellbags.py` requires:
+
+- Python 3
+- `argparse`
+- `six`
+- `python-registry`
+
+---
+
+## Usage
+
+`shellbags.py` accepts the path to a raw Windows Registry hive.  
 This hive should be acquired forensically.
-To ensure interoperability, output is formatted according to the Bodyfile specification by default.
 
-Parameters:
+To ensure interoperability, output is formatted according to the **Bodyfile** specification by default.
+
+### Parameters
+
 usage: shellbags.py [-h] [-v] [-p] [-o {csv,bodyfile}] file [file ...]
 
 Parse Shellbag entries from a Windows Registry.
@@ -46,7 +58,8 @@ optional arguments:
               ANSI color codes
   -o {csv,bodyfile}  Output format: csv or bodyfile; default is bodyfile
 
-Example: 
+### Exanple:
+
 $ python shellbags.py ~/projects/registry-files/willi/xp/NTUSER.DAT.copy0
 0|\My Documents (Shellbag)|0|0|0|0|0|978325200|978325200|18000|978325200
 0|\My Documents\Downloads (Shellbag)|0|0|0|0|0|1282762334|1282762334|18000|1281987456
@@ -60,17 +73,13 @@ $ python shellbags.py ~/projects/registry-files/willi/xp/NTUSER.DAT.copy0
 0|\My Documents\My Dropbox\Tools\Windows\Adobe (Shellbag)|0|0|0|0|0|1281994956|1284668784|18000|1281989140
 0|\My Documents\My Dropbox\Tools\Windows\Bitpim (Shellbag)|0|0|0|0|0|1281994656|1284668784|18000|1281989140
 
-Wanted
-------
-*) Bug reports.
-*) Feedback.
+## License
 
-License
--------
 shellbags.py is released under the Apache 2.0 license.
 
-Sources
--------
+
+## Sources
+
 1) "Using shellbag information to reconstruct user activities" by 
    Yuandong Zhu, Pavel Gladyshev, and Joshua James which may be
    accessed http://www.dfrws.org/2009/proceedings/p69-zhu.pdf
@@ -82,4 +91,3 @@ Sources
    at https://42llc.net/?p=385
 5) "Windows Shell Item format specification" by Joachim Metz, which
    may be accessed at http://download.polytechnic.edu.na/pub4/download.sourceforge.net/pub/sourceforge/l/project/li/liblnk/Documentation/Windows%20Shell%20Item%20format/Windows%20Shell%20Item%20format.pdf
-   
