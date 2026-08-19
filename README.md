@@ -61,16 +61,27 @@ optional arguments:
 ### Exanple:
 
 $ python shellbags.py ~/projects/registry-files/willi/xp/NTUSER.DAT.copy0
+
 0|\My Documents (Shellbag)|0|0|0|0|0|978325200|978325200|18000|978325200
+
 0|\My Documents\Downloads (Shellbag)|0|0|0|0|0|1282762334|1282762334|18000|1281987456
+
 0|\My Documents\My Dropbox (Shellbag)|0|0|0|0|0|1281989096|1282762296|18000|1281989050
+
 0|\My Documents\My Music (Shellbag)|0|0|0|0|0|1281995426|1282239780|18000|1281987154
+
 0|\My Documents\My Pictures (Shellbag)|0|0|0|0|0|1281995426|1282239780|18000|1281987152
+
 0|\My Documents\My Dropbox (Shellbag)|0|0|0|0|0|978325200|978325200|18000|978325200
+
 0|\My Documents\My Dropbox\Tools (Shellbag)|0|0|0|0|0|1281989092|1281989092|18000|1281989088
+
 0|\My Documents\My Dropbox\Tools\Windows (Shellbag)|0|0|0|0|0|1281989140|1281989140|18000|1281989092
+
 0|\My Documents\My Dropbox\Tools\Windows\7zip (Shellbag)|0|0|0|0|0|1281993604|1284668784|18000|1281989140
+
 0|\My Documents\My Dropbox\Tools\Windows\Adobe (Shellbag)|0|0|0|0|0|1281994956|1284668784|18000|1281989140
+
 0|\My Documents\My Dropbox\Tools\Windows\Bitpim (Shellbag)|0|0|0|0|0|1281994656|1284668784|18000|1281989140
 
 ## License
