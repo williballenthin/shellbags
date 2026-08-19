@@ -143,7 +143,7 @@ def get_shellbags(shell_key):
 
         # Next, recurse into each BagMRU key
         for value in [value for value in key.values()
-                      if re.match("\d+", value.name())]:
+                if re.match(r"\d+", value.name())]:
             path = ""
             try:  # TODO(wb): removeme
                 l = SHITEMLIST(value.value(), 0, False)
@@ -161,8 +161,8 @@ def get_shellbags(shell_key):
                         "klwt":  key.timestamp()
                     })
             except OverrunBufferException:
-                print key.path()
-                print value.name()
+                print(key.path())
+                print(value.name())
                 raise
 
             shellbag_rec(key.subkey(value.name()),
@@ -245,14 +245,11 @@ def print_shellbag_bodyfile(m, a, cr, path, fail_note=None):
     created = date_safe(cr)
     changed = int(calendar.timegm(datetime.datetime.min.timetuple()))
     try:
-        print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
-            (path, modified, accessed, changed, created)
-    except UnicodeDecodeError:
-        print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
-            (fail_note, modified, accessed, changed, created)
-    except UnicodeEncodeError:
-        print u"0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % \
-            (fail_note, modified, accessed, changed, created)
+        print("0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % 
+            (path, modified, accessed, changed, created))
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        print("0|%s (Shellbag)|0|0|0|0|0|%s|%s|%s|%s" % 
+            (fail_note, modified, accessed, changed, created))
 
 
 ################ MAIN  #############
@@ -286,7 +283,7 @@ def main(argv=None):
                                         shellbag["path"],
                                         fail_note="Failed to parse entry name from: " + shellbag["source"])
         else:
-            print "Error: Unsupported output format"
+            print("Error: Unsupported output format")
             
 if __name__ == "__main__":
     main(argv=sys.argv)
