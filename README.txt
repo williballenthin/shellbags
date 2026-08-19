@@ -2,6 +2,14 @@
 shellbags.py
 ===============
 
+## Python 3 Compatibility Fork
+
+This is a modified version of Willi Ballenthin's shellbags.py, updated for Python 3 compatibility.
+
+Original repository: https://github.com/williballenthin/shellbags  
+Original author: Willi Ballenthin  
+License: Apache License 2.0
+
 Introduction
 ------------
 shellbags.py is a cross-platform, open-source shellbag parser.
