@@ -58,7 +58,7 @@ optional arguments:
               ANSI color codes
   -o {csv,bodyfile}  Output format: csv or bodyfile; default is bodyfile
 
-### Exanple:
+### Example:
 
 $ python shellbags.py ~/projects/registry-files/willi/xp/NTUSER.DAT.copy0
 
