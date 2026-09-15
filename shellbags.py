@@ -70,7 +70,7 @@ class ShellbagException(Exception):
         self._value = value
 
     def __str__(self):
-        return str(unicode(self))
+        return str(self._value)
 
     def __unicode__(self):
         return u"Shellbag Exception: %s" % (self._value)
@@ -138,8 +138,8 @@ def get_shellbags(shell_key):
         except Registry.RegistryKeyNotFoundException:
             g_logger.warning("Registry.RegistryKeyNotFoundException")
             pass
-        except:
-            g_logger.warning("Unexpected error %s" % sys.exc_info()[0])
+        except Exception as e:
+            g_logger.warning("Unexpected error %s" % type(e).__name__)
 
         # Next, recurse into each BagMRU key
         for value in [value for value in key.values()
