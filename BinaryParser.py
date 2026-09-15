@@ -15,15 +15,15 @@ def dosdate(dosdate, dostime):
     returns: datetime.datetime or datetime.datetime.min on error
     """
     try:
-        t = ord(dosdate[1]) << 8
-        t |= ord(dosdate[0])
+        t = dosdate[1] << 8
+        t |= dosdate[0]
         day = t & 0b0000000000011111
         month = (t & 0b0000000111100000) >> 5
         year = (t & 0b1111111000000000) >> 9
         year += 1980
 
-        t = ord(dostime[1]) << 8
-        t |= ord(dostime[0])
+        t = dostime[1] << 8
+        t |= dostime[0]
         sec = t & 0b0000000000011111
         sec *= 2
         minute = (t & 0b0000011111100000) >> 5
@@ -58,9 +58,10 @@ class ParseException(Exception):
         - `value`: A string description.
         """
         super(ParseException, self).__init__(value)
+        self._value = value
 
     def __str__(self):
-        return str(unicode(self))
+        return str(self._value)
 
     def __unicode__(self):
         return u"Parse Exception(%s)" % (self._value)
@@ -74,9 +75,10 @@ class OverrunBufferException(ParseException):
     def __init__(self, readOffs, bufLen):
         tvalue = "read: %s, buffer length: %s" % (hex(readOffs), hex(bufLen))
         super(ParseException, self).__init__(tvalue)
+        self._value = tvalue
 
     def __str__(self):
-        return str(unicode(self))
+        return str(self._value)
 
     def __unicode__(self):
         return u"Tried to parse beyond the end of the file (%s)" % (self._value)
@@ -103,7 +105,7 @@ class Block(object):
         return u"BLOCK @ %s." % (hex(self.offset()))
 
     def __str__(self):
-        return str(unicode(self))
+        return str(self.__unicode__())
 
     def _prepare_fields(self, fields=False):
         """
@@ -269,7 +271,7 @@ class Block(object):
         if len(raw_bytes) % 2:
             raw_bytes = raw_bytes[:-1]
         try:
-            index = [raw_bytes[i:i + 2] for i in range(0, len(raw_bytes), 2)].index('\x00\x00')
+            index = [raw_bytes[i:i + 2] for i in range(0, len(raw_bytes), 2)].index(b'\x00\x00')
             raw_bytes = raw_bytes[:index * 2]
         except ValueError:
             pass
