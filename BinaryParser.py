@@ -15,15 +15,15 @@ def dosdate(dosdate, dostime):
     returns: datetime.datetime or datetime.datetime.min on error
     """
     try:
-        t = ord(dosdate[1]) << 8
-        t |= ord(dosdate[0])
+        t = dosdate[1] << 8
+        t |= dosdate[0]
         day = t & 0b0000000000011111
         month = (t & 0b0000000111100000) >> 5
         year = (t & 0b1111111000000000) >> 9
         year += 1980
 
-        t = ord(dostime[1]) << 8
-        t |= ord(dostime[0])
+        t = dostime[1] << 8
+        t |= dostime[0]
         sec = t & 0b0000000000011111
         sec *= 2
         minute = (t & 0b0000011111100000) >> 5
@@ -58,9 +58,10 @@ class ParseException(Exception):
         - `value`: A string description.
         """
         super(ParseException, self).__init__(value)
+        self._value = value
 
     def __str__(self):
-        return str(unicode(self))
+        return str(self._value)
 
     def __unicode__(self):
         return u"Parse Exception(%s)" % (self._value)
@@ -74,9 +75,10 @@ class OverrunBufferException(ParseException):
     def __init__(self, readOffs, bufLen):
         tvalue = "read: %s, buffer length: %s" % (hex(readOffs), hex(bufLen))
         super(ParseException, self).__init__(tvalue)
+        self._value = tvalue
 
     def __str__(self):
-        return str(unicode(self))
+        return str(self._value)
 
     def __unicode__(self):
         return u"Tried to parse beyond the end of the file (%s)" % (self._value)
@@ -103,7 +105,7 @@ class Block(object):
         return u"BLOCK @ %s." % (hex(self.offset()))
 
     def __str__(self):
-        return str(unicode(self))
+        return str(self.__unicode__())
 
     def _prepare_fields(self, fields=False):
         """
@@ -120,17 +122,12 @@ class Block(object):
                 f = getattr(self, "unpack_" + field[0])
                 return f(*(field[2:]))
             setattr(self, field[1], handler)
-            debug_payload = handler()
-            if isinstance(debug_payload, six.text_type):
-                debug_payload = debug_payload.encode('utf8')
-            else:
-                debug_payload = str(debug_payload)
-            debug_payload = binascii.hexlify(debug_payload)
-            g_logger.debug("(%s) %s\t@ %s\t: %s" % (field[0].upper(),
-                                         field[1],
-                                         hex(self.absolute_offset(field[2])),
-                                         debug_payload))
-            setattr(self, "_off_" + field[1], field[2])
+        debug_payload = handler()
+        if isinstance(debug_payload, six.text_type):
+            debug_payload = debug_payload.encode('utf-8')
+        elif not isinstance(debug_payload, (bytes, bytearray)):
+            debug_payload = str(debug_payload).encode('utf-8')
+        debug_payload = binascii.hexlify(debug_payload)
 
     def declare_field(self, type, name, offset, length=False):
         """
@@ -241,11 +238,11 @@ class Block(object):
         o = self._offset + offset
 
         if not length:
-            end = self._buf.find("\x00", o)
+            end = self._buf.find(b"\x00", o)
             length = end - o
 
         try:
-            return struct.unpack_from("<%ds" % (length), self._buf, o)[0].partition("\x00")[0]
+            return struct.unpack_from("<%ds" % (length), self._buf, o)[0].partition(b"\x00")[0].decode('utf-8', errors='replace')
         except struct.error:
             raise OverrunBufferException(o, len(self._buf))
 
@@ -274,7 +271,7 @@ class Block(object):
         if len(raw_bytes) % 2:
             raw_bytes = raw_bytes[:-1]
         try:
-            index = [raw_bytes[i:i + 2] for i in range(0, len(raw_bytes), 2)].index('\x00\x00')
+            index = [raw_bytes[i:i + 2] for i in range(0, len(raw_bytes), 2)].index(b'\x00\x00')
             raw_bytes = raw_bytes[:index * 2]
         except ValueError:
             pass
@@ -311,7 +308,7 @@ class Block(object):
             raise OverrunBufferException(o, len(self._buf))
 
         # Yeah, this is ugly
-        h = map(ord, _bin)
+        h = list(_bin)
         return "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x" % \
             (h[3], h[2], h[1], h[0],
              h[5], h[4],
